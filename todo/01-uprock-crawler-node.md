@@ -1,0 +1,61 @@
+- [x] Create an `UpRockCrawler` node modeled after `GithubIssues`, with a top-level `Command` option whose values map one-to-one to MCP tool names.
+- [x] Use `nodes/UpRockCrawler/UpRockCrawler.node.ts` for node metadata, following the `GithubIssues.node.ts` pattern for `displayName`, `name`, `icon`, `group`, `version`, `subtitle`, `description`, `defaults`, `usableAsTool`, `inputs`, `outputs`, `credentials`, and `properties`.
+- [x] Set the node subtitle to the selected command, such as `={{$parameter["command"]}}`, because UpRockCrawler does not need the `Resource` and `Operation` split used by `GithubIssues`.
+- [x] Create `nodes/UpRockCrawler/UpRockCrawler.node.json` using the same Codex metadata shape as `GithubIssues.node.json`, with UpRock-specific categories and documentation URLs.
+- [x] Use a small-file layout under `nodes/UpRockCrawler/commands/` for each MCP command description, mirroring `nodes/GithubIssues/resources/{resource}/{operation}.ts`.
+- [x] Create `nodes/UpRockCrawler/commands/index.ts` to export the top-level `Command` option and spread command-specific property arrays in one place.
+- [x] Use shared helpers under `nodes/UpRockCrawler/shared/` for MCP transport, common option lists, input cleanup, and output normalization, mirroring the `GithubIssues/shared/` boundary.
+- [x] Skip `methods.listSearch` for the first UpRockCrawler version because the MCP schema does not currently expose dynamic picker endpoints like GitHub owner, repository, or issue search.
+- [x] Add UpRock MCP credentials that ask for the API key UUID as a password credential, not the full MCP URL.
+- [x] Create `credentials/UpRockCrawlerApi.credentials.ts` with `name = 'upRockCrawlerApi'`, an UpRock display name, an API key UUID password field, and the optional advanced MCP base URL field.
+- [x] Build the MCP URL internally as `https://mcp.uprock.ai/{apiKey}/mcp` so the UUID remains managed as a credential value.
+- [x] Build the MCP URL in `shared/transport.ts` from credential values and trim leading or trailing slashes so custom base URLs produce `{baseUrl}/{apiKey}/mcp` exactly once.
+- [x] Add credential validation for UUID-shaped API keys and keep the raw API key out of node parameters, logs, errors, and returned output.
+- [x] Add an optional advanced credential field for MCP base URL, defaulting to `https://mcp.uprock.ai`, so local or staging endpoints can be tested without exposing the full production URL as the primary credential.
+- [x] Add a credential test that initializes the MCP session and calls `tools/list`, succeeding only when the server advertises the expected UpRock tools.
+- [x] Implement MCP transport setup for `initialize`, `notifications/initialized`, session ID handling, `tools/call`, JSON response parsing, and clear error output.
+- [x] Implement UpRock command execution with an imperative `execute()` method instead of declarative `routing`, because every command must call MCP `tools/call` with a JSON-RPC body.
+- [x] For each input item, read the selected `command`, collect only the parameters visible for that command, omit empty optional values, and call the matching MCP tool name.
+- [x] Return one output item per input item, preserving n8n item pairing and respecting `continueOnFail` for MCP errors.
+- [x] Parse MCP `content` responses that contain JSON text, fall back to plain text when content is not JSON, and include the raw MCP envelope only when useful for debugging.
+- [x] Centralize the MCP location option list for `NA`, `EU`, `APAC`, `LATAM`, `MEA`, `US`, `GB`, `CA`, `AU`, `DE`, `FR`, `JP`, `CN`, `IN`, `BR`, `MX`, `ES`, `IT`, `NL`, `SE`, `NO`, `DK`, `FI`, `PL`, `RU`, `KR`, `SG`, `HK`, `TW`, `TH`, `VN`, `ID`, `MY`, `PH`, `ZA`, `AE`, `SA`, `IL`, `TR`, `AR`, `CL`, `CO`, `NZ`, `IE`, `CH`, `AT`, `BE`, `PT`, `CZ`, `RO`, `HU`, `GR`, `UA`, `EG`, `RS`, `AM`, `AL`, `BG`, `CY`, `DZ`, `IQ`, `KE`, `NG`, `PA`, `SK`, `TT`, `LK`, and `AG`.
+- [x] Centralize MCP region options for `NA`, `EU`, `APAC`, `LATAM`, and `MEA` separately from country options so `sweep.regions` cannot accidentally use country codes.
+- [x] Use n8n `displayOptions.show` on every command-specific property so the UI stays compact when users switch commands.
+- [x] Give every command option a clear `action` value for n8n AI/tool usage, such as `Fetch a URL via UpRock`, `Fetch an UpRock resource`, `Run an UpRock sweep`, and `Search the web via UpRock`.
+- [x] Add the `crawl_fetch` command with required `url`, plus optional `method`, `body`, `country`, `device_type`, `timeout_sec`, and `retries` parameters.
+- [x] Put `crawl_fetch` fields in `nodes/UpRockCrawler/commands/crawlFetch.ts`, using camelCase n8n parameter names only when they are transformed back to MCP snake_case before `tools/call`.
+- [x] For `crawl_fetch`, expose `method` as `CRAWL_FULL_PAGE`, `GET`, `POST`, and `PUT`, default it to `CRAWL_FULL_PAGE`, and show `body` only for `POST` and `PUT`.
+- [x] For `crawl_fetch`, expose `country` with the MCP-supported meta-regions and country codes, `device_type` as `mobile` or `desktop`, `timeout_sec` with default `60` and max `300`, and `retries` with default `2` and max `3`.
+- [x] Add `crawl_fetch` descriptions that explain `CRAWL_FULL_PAGE` renders JavaScript, `GET` is faster for static pages, and `country` controls crawl location rather than page topic.
+- [x] Add the `resource_fetch` command with required `uri`, accepting `crawl://...` and `sweep://...` resource URIs returned by prior commands.
+- [x] Put `resource_fetch` fields in `nodes/UpRockCrawler/commands/resourceFetch.ts` and validate the URI begins with `crawl://` or `sweep://`.
+- [x] For `resource_fetch`, handle text and image-like resource responses explicitly so markdown/HTML resources return JSON text while screenshot resources do not get silently discarded.
+- [x] Add the `sweep` command with required `url`, plus optional `device`, `regions`, `timeout`, and `tries` parameters.
+- [x] Put `sweep` fields in `nodes/UpRockCrawler/commands/sweep.ts`.
+- [x] For `sweep`, expose `device` as `mobile` or `desktop` with default `mobile`, `regions` as multi-select `NA`, `EU`, `APAC`, `LATAM`, and `MEA` with default `NA`, `EU`, and `APAC`, plus numeric `timeout` default `60` and `tries` default `5`.
+- [x] Add `sweep` descriptions that clarify all region checks run concurrently and screenshot resource links can be fetched later with `resource_fetch`.
+- [x] Add the `web_research` command with required `query`, plus optional `max_results`, `num_sources`, and `suggested_countries` parameters.
+- [x] Put `web_research` fields in `nodes/UpRockCrawler/commands/webResearch.ts`.
+- [x] For `web_research`, expose `max_results` with default `12` and max `50`, `num_sources` with default `5` and max `20`, and `suggested_countries` as a multi-select using the MCP-supported meta-regions and country codes.
+- [x] Add `web_research` descriptions that clarify `suggested_countries` controls search perspective, not the subject of the query.
+- [x] Normalize command outputs so each MCP result returns the raw tool result plus important convenience fields such as status, metadata, summary, resource URIs, screenshots, metrics, report URL, and search results when present.
+- [x] For `crawl_fetch` output, surface `job_id`, `meta`, `summary`, `content.html.resource`, `content.markdown.resource`, and any `screenshots.viewport.resource`.
+- [x] For `resource_fetch` output, surface `uri`, detected MIME type or content type, text content when available, and binary/resource metadata when the payload is non-text.
+- [x] For `sweep` output, surface aggregate job counts, per-region/per-job metrics, failed job errors, screenshot resource URIs, and `report_url`.
+- [x] For `web_research` output, surface `query`, `count`, and normalized `results` with `url`, `title`, and `description`.
+- [x] Register the UpRock node, credentials, and icon in `package.json` so n8n discovers the new node alongside `GithubIssues`.
+- [x] Update `package.json` author metadata to use `developer@uprock.com`.
+- [x] Update `package.json` repository metadata to `https://github.com/uprockcom/n8n-nodes-uprock.git`.
+- [x] Keep the npm package name aligned with the repo as `n8n-nodes-uprock`.
+- [x] Add UpRock icon files under `icons/` or decide to use a neutral crawler icon before wiring `icon` paths in the node and credential.
+- [x] Update `README.md` to describe the UpRockCrawler node instead of the current GitHub Issues sample package.
+- [x] Document the UpRock API key UUID credential flow in `README.md`, including that the node builds `https://mcp.uprock.ai/{apiKey}/mcp` internally and does not ask users for the full MCP URL.
+- [x] Document each UpRockCrawler command in `README.md`: `crawl_fetch`, `resource_fetch`, `sweep`, and `web_research`, with required parameters and the most important optional parameters.
+- [x] Document common workflows in `README.md`, including fetching a URL, fetching returned `crawl://` or `sweep://` resources, running a regional sweep, and using `web_research` with geographic perspective settings.
+- [x] Remove GitHub Issues sample wording, screenshots, credential references, node paths, and package registration examples from `README.md` after the GitHub sample files are removed.
+- [x] After UpRockCrawler is implemented and verified, remove the sample `nodes/GithubIssues/` folder, GitHub credentials, GitHub icons, and GitHub package registrations so the package only ships UpRock functionality.
+- [x] Add focused tests or a build-time verification path for command descriptions, credential registration, MCP request construction, and output normalization.
+- [x] Add TypeScript-level checks that command description files export `INodeProperties[]` and that every MCP command has a matching argument builder.
+- [x] Add mocked transport tests for initialize/session reuse, `tools/call` body construction, JSON content parsing, empty optional parameter omission, and error handling.
+- [x] Verify the finished node by running the package build and making at least one safe sample call for each command against the MCP endpoint.
+- [ ] Commit the completed local work once verified, but do not push because the repository intentionally has no Git remote configured.
