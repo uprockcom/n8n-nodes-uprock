@@ -82,6 +82,15 @@ out
 .nuxt
 dist
 
+# Local n8n Docker runtime data
+.n8n-data/
+
+# Local MCP/node verification output
+test_results/
+
+# Local change inventory and commit planning notes
+.changes/
+
 # Gatsby files
 .cache/
 # Comment in the public line in if your project uses Gatsby and not Next.js
@@ -137,3 +146,4 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+/.idea
