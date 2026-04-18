@@ -1,0 +1,19 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: uprock-n8n-local
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      GENERIC_TIMEZONE: "${GENERIC_TIMEZONE:-UTC}"
+      TZ: "${TZ:-UTC}"
+    volumes:
+      - ./.n8n-data:/home/node/.n8n
+      - ./dist/nodes:/home/node/.n8n/custom/nodes:ro
+      - ./dist/credentials:/home/node/.n8n/custom/credentials:ro
+      - ./dist/icons:/home/node/.n8n/custom/icons:ro
