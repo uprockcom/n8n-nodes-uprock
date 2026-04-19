@@ -21,6 +21,8 @@ import {
 	MCP_CLIENT_INFO,
 	MCP_PROTOCOL_VERSION,
 	callUpRockMcpTool,
+	callUpRockMcpToolInSession,
+	initializeUpRockMcpSession,
 	parseMcpJsonRpcResponse,
 	type UpRockCrawlerCredentials,
 } from './shared/transport';
@@ -53,6 +55,16 @@ function assertResourceUri(uri: unknown): string {
 }
 
 const commandArgumentBuilders: Record<UpRockCommand, CommandArgumentBuilder> = {
+	fetch: (executeFunctions, itemIndex) =>
+		cleanMcpArguments({
+			url: executeFunctions.getNodeParameter('url', itemIndex),
+			method: executeFunctions.getNodeParameter('method', itemIndex, 'CRAWL_FULL_PAGE'),
+			body: executeFunctions.getNodeParameter('body', itemIndex, ''),
+			country: executeFunctions.getNodeParameter('country', itemIndex, ''),
+			device_type: executeFunctions.getNodeParameter('deviceType', itemIndex, ''),
+			timeout_sec: executeFunctions.getNodeParameter('timeoutSeconds', itemIndex, 60),
+			retries: executeFunctions.getNodeParameter('retries', itemIndex, 2),
+		}),
 	crawl_fetch: (executeFunctions, itemIndex) =>
 		cleanMcpArguments({
 			url: executeFunctions.getNodeParameter('url', itemIndex),
@@ -98,6 +110,107 @@ function buildCommandArguments(
 	}
 
 	return commandArgumentBuilders[command](executeFunctions, itemIndex);
+}
+
+function isDataObject(value: unknown): value is IDataObject {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getStringValue(value: unknown): string | undefined {
+	return typeof value === 'string' ? value : undefined;
+}
+
+function getResourceText(output: IDataObject | undefined): string | undefined {
+	return (
+		getStringValue(output?.text) ??
+		(isDataObject(output?.result) ? getStringValue(output.result.text) : undefined)
+	);
+}
+
+function getResourceContentType(output: IDataObject | undefined): string | undefined {
+	return (
+		getStringValue(output?.contentType) ??
+		getStringValue(output?.mimeType) ??
+		(isDataObject(output?.result)
+			? getStringValue(output.result.contentType) ?? getStringValue(output.result.mimeType)
+			: undefined)
+	);
+}
+
+function getResourceSizeBytes(output: IDataObject | undefined): number | undefined {
+	const sizeBytes =
+		output?.sizeBytes ?? (isDataObject(output?.result) ? output.result.sizeBytes : undefined);
+	return typeof sizeBytes === 'number' ? sizeBytes : undefined;
+}
+
+async function executeFetchCommand(
+	executeFunctions: IExecuteFunctions,
+	args: IDataObject,
+	itemIndex: number,
+): Promise<IDataObject> {
+	const session = await initializeUpRockMcpSession.call(executeFunctions, itemIndex);
+	const crawlResult = await callUpRockMcpToolInSession.call(
+		executeFunctions,
+		session,
+		'crawl_fetch',
+		args,
+	);
+	const crawl = normalizeMcpToolResult('crawl_fetch', crawlResult as McpToolResult);
+	const markdownUri = getStringValue(
+		isDataObject(crawl.resourceUris) ? crawl.resourceUris.markdown : undefined,
+	);
+	const htmlUri = getStringValue(isDataObject(crawl.resourceUris) ? crawl.resourceUris.html : undefined);
+	let markdown: IDataObject | undefined;
+	let html: IDataObject | undefined;
+
+	if (markdownUri) {
+		const markdownResult = await callUpRockMcpToolInSession.call(
+			executeFunctions,
+			session,
+			'resource_fetch',
+			{ uri: markdownUri },
+		);
+		markdown = normalizeMcpToolResult('resource_fetch', markdownResult as McpToolResult);
+	}
+
+	if (htmlUri) {
+		const htmlResult = await callUpRockMcpToolInSession.call(
+			executeFunctions,
+			session,
+			'resource_fetch',
+			{ uri: htmlUri },
+		);
+		html = normalizeMcpToolResult('resource_fetch', htmlResult as McpToolResult);
+	}
+
+	return {
+		command: 'fetch',
+		url: args.url,
+		status: crawl.status,
+		job_id: crawl.job_id,
+		meta: crawl.meta,
+		summary: crawl.summary,
+		resourceUris: crawl.resourceUris,
+		crawl,
+		markdown: markdown
+			? {
+					uri: markdownUri,
+					text: getResourceText(markdown),
+					contentType: getResourceContentType(markdown),
+					sizeBytes: getResourceSizeBytes(markdown),
+					result: markdown.result,
+				}
+			: undefined,
+		html: html
+			? {
+					uri: htmlUri,
+					text: getResourceText(html),
+					contentType: getResourceContentType(html),
+					sizeBytes: getResourceSizeBytes(html),
+					result: html.result,
+				}
+			: undefined,
+	};
 }
 
 function getHeader(headers: IDataObject | undefined, name: string): string | undefined {
@@ -257,11 +370,17 @@ export class UpRockCrawler implements INodeType {
 
 			try {
 				const args = buildCommandArguments(this, command, itemIndex);
-				const result = await callUpRockMcpTool.call(this, command, args, itemIndex);
-				const json = normalizeMcpToolResult(command, result as McpToolResult);
+				let outputJson: IDataObject;
+
+				if (command === 'fetch') {
+					outputJson = await executeFetchCommand(this, args, itemIndex);
+				} else {
+					const result = await callUpRockMcpTool.call(this, command, args, itemIndex);
+					outputJson = normalizeMcpToolResult(command, result as McpToolResult);
+				}
 
 				returnData.push({
-					json,
+					json: outputJson,
 					pairedItem: {
 						item: itemIndex,
 					},

@@ -1,13 +1,13 @@
 import packageJson from '../../../package.json';
 import { commandDescription } from '../commands';
-import { UPROCK_MCP_COMMANDS } from '../commands/types';
+import { UPROCK_NODE_COMMANDS } from '../commands/types';
 import { normalizeMcpToolResult, type McpToolResult } from './output';
 import { buildMcpToolCallRequest, buildUpRockMcpUrl } from './transport';
 
 const sampleApiKey = '00000000-0000-4000-8000-000000000000';
 
 export const upRockStaticVerification = {
-	commandValues: UPROCK_MCP_COMMANDS,
+	commandValues: UPROCK_NODE_COMMANDS,
 	commandDescriptionCount: commandDescription.length,
 	credentialRegistered: packageJson.n8n.credentials.includes(
 		'dist/credentials/UpRockCrawlerApi.credentials.js',

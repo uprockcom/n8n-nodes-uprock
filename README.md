@@ -17,14 +17,22 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
-The UpRock Crawler node exposes one **Command** selector. Each command maps to an UpRock MCP tool:
+The UpRock Crawler node exposes one **Command** selector. Most commands map directly to UpRock MCP tools, while `fetch` is a convenience command that chains MCP calls:
 
+- `fetch`: Crawl a URL, then return both Markdown and HTML content
 - `crawl_fetch`: Fetch a URL through the UpRock crawl network
 - `resource_fetch`: Fetch full content for a `crawl://` or `sweep://` resource URI
 - `sweep`: Test website reliability and performance across geographic regions
 - `web_research`: Search the web across search engines and geographic perspectives
 
 ### Command Parameters
+
+`fetch`
+
+- Required: `url`
+- Optional: `method`, `body`, `country`, `deviceType`, `timeoutSeconds`, `retries`
+- Returns both Markdown and HTML content plus crawl metadata
+- Internally runs `crawl_fetch`, then `resource_fetch` for returned Markdown and HTML resources
 
 `crawl_fetch`
 
@@ -83,6 +91,8 @@ Credential flow:
 
 Use `crawl_fetch` to fetch a page. The default method is `CRAWL_FULL_PAGE`, which renders JavaScript and is the most reliable option for modern sites. Use `GET` when you know the target is a static page or API endpoint.
 
+Use `fetch` when you want the crawler output and the full page content in one node. It returns crawl metadata, summary, resource URIs, Markdown text, and HTML text.
+
 Use `resource_fetch` when a prior command returns a `crawl://` or `sweep://` resource URI. Markdown and HTML resources return text content, while screenshot-like resources return resource metadata and binary-safe fields.
 
 Use `sweep` to run regional reliability checks. The default regions are `NA`, `EU`, and `APAC`, and checks run concurrently.
@@ -94,9 +104,9 @@ Use `web_research` for search. Put geographic terms in the query only when they 
 Fetch a URL:
 
 1. Add an UpRock Crawler node.
-2. Select `crawl_fetch`.
+2. Select `fetch`.
 3. Set `url`.
-4. Use `resourceUris.markdown` or `resourceUris.html` from the output when you need the full extracted content.
+4. Read Markdown from `markdown.text` and HTML from `html.text`.
 
 Fetch returned resources:
 

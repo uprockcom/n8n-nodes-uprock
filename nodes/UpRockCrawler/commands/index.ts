@@ -1,8 +1,9 @@
 import type { INodeProperties } from 'n8n-workflow';
 import { crawlFetchDescription } from './crawlFetch';
+import { fetchDescription } from './fetch';
 import { resourceFetchDescription } from './resourceFetch';
 import { sweepDescription } from './sweep';
-import { UPROCK_MCP_COMMANDS, type UpRockCommand } from './types';
+import { UPROCK_NODE_COMMANDS, type UpRockCommand } from './types';
 import { webResearchDescription } from './webResearch';
 
 const commandOptions: Record<
@@ -14,6 +15,12 @@ const commandOptions: Record<
 		description: string;
 	}
 > = {
+	fetch: {
+		name: 'Fetch',
+		value: 'fetch',
+		action: 'Fetch a URL via UpRock and return Markdown and HTML',
+		description: 'Crawl a URL, then fetch the returned Markdown and HTML resources',
+	},
 	crawl_fetch: {
 		name: 'Crawl Fetch',
 		value: 'crawl_fetch',
@@ -41,6 +48,7 @@ const commandOptions: Record<
 };
 
 const commandDescriptions: Record<UpRockCommand, INodeProperties[]> = {
+	fetch: fetchDescription,
 	crawl_fetch: crawlFetchDescription,
 	resource_fetch: resourceFetchDescription,
 	sweep: sweepDescription,
@@ -53,9 +61,9 @@ export const commandDescription: INodeProperties[] = [
 		name: 'command',
 		type: 'options',
 		noDataExpression: true,
-		options: UPROCK_MCP_COMMANDS.map((command) => commandOptions[command]),
-		default: 'crawl_fetch',
-		description: 'UpRock MCP command to run',
+		options: UPROCK_NODE_COMMANDS.map((command) => commandOptions[command]),
+		default: 'fetch',
+		description: 'UpRock command to run',
 	},
-	...UPROCK_MCP_COMMANDS.flatMap((command) => commandDescriptions[command]),
+	...UPROCK_NODE_COMMANDS.flatMap((command) => commandDescriptions[command]),
 ];

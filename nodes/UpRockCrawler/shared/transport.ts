@@ -282,6 +282,15 @@ export async function callUpRockMcpTool(
 	itemIndex = 0,
 ): Promise<IDataObject> {
 	const session = await initializeUpRockMcpSession.call(this, itemIndex);
+	return callUpRockMcpToolInSession.call(this, session, name, args);
+}
+
+export async function callUpRockMcpToolInSession(
+	this: UpRockMcpFunctions,
+	session: UpRockMcpSession,
+	name: string,
+	args: IDataObject,
+): Promise<IDataObject> {
 	const response = await postJsonRpc.call(
 		this,
 		session.url,
