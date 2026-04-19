@@ -58,4 +58,4 @@
 - [x] Add TypeScript-level checks that command description files export `INodeProperties[]` and that every MCP command has a matching argument builder.
 - [x] Add mocked transport tests for initialize/session reuse, `tools/call` body construction, JSON content parsing, empty optional parameter omission, and error handling.
 - [x] Verify the finished node by running the package build and making at least one safe sample call for each command against the MCP endpoint.
-- [ ] Commit the completed local work once verified, but do not push because the repository intentionally has no Git remote configured.
+- [x] Commit the completed local work once verified, but do not push because the repository intentionally has no Git remote configured.
