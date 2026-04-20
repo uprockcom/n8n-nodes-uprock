@@ -4,16 +4,158 @@ This is an n8n community node package for UpRock. It provides the **UpRock Crawl
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
-[Installation](#installation)
-[Operations](#operations)
-[Credentials](#credentials)
-[Usage](#usage)
-[Compatibility](#compatibility)
-[Resources](#resources)
+- [Installation](#installation)
+- [Use The UpRock Node In Your Own n8n Instance](#use-the-uprock-node-in-your-own-n8n-instance)
+- [Operations](#operations)
+- [Credentials](#credentials)
+- [Usage](#usage)
+- [Compatibility](#compatibility)
+- [Resources](#resources)
 
 ## Installation
 
-Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
+Install the package named `n8n-nodes-uprock` in a self-hosted n8n instance. n8n Cloud doesn't load unverified npm community node packages, so run this node on self-hosted n8n.
+
+You can install community nodes from the n8n UI when your instance supports it:
+
+1. Go to **Settings** > **Community Nodes**.
+2. Select **Install**.
+3. Enter `n8n-nodes-uprock`.
+4. Restart n8n if your deployment doesn't reload community packages automatically.
+
+For command-line and production deployment patterns, use the runbooks below.
+
+## Use The UpRock Node In Your Own n8n Instance
+
+These instructions are intended for DevOps teams running self-hosted n8n. They assume the npm package name is `n8n-nodes-uprock` and the node display name is **UpRock Crawler**.
+
+### Prerequisites
+
+- Self-hosted n8n with community packages enabled. Keep `N8N_COMMUNITY_PACKAGES_ENABLED=true` explicit in Docker, Kubernetes, and systemd configs.
+- Owner or admin access to install community nodes.
+- Network egress from n8n to `https://mcp.uprock.ai`.
+- An UpRock MCP API key UUID for the n8n credential.
+- The same package version installed on every n8n process that can execute workflows. In queue mode, install it on the main, webhook, and worker containers or hosts.
+
+### Docker
+
+The safest Docker setup is to persist n8n's user data directory, because n8n loads community packages from disk at startup. Persist `/home/node/.n8n`, or at minimum `/home/node/.n8n/nodes`.
+
+Example Docker Compose service:
+
+```yaml
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
+      GENERIC_TIMEZONE: "UTC"
+      TZ: "UTC"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:
+```
+
+Use a pinned n8n image tag instead of `latest` for production rollouts.
+
+Install the package inside the running container:
+
+```sh
+docker exec -it -u node n8n sh
+mkdir -p ~/.n8n/nodes
+cd ~/.n8n/nodes
+npm install n8n-nodes-uprock
+exit
+docker restart n8n
+```
+
+If your Compose service name is `n8n` but the container name is different, use:
+
+```sh
+docker compose exec -u node n8n sh
+```
+
+Upgrade or pin a specific package version by replacing `<version>` with the release you want:
+
+```sh
+docker exec -it -u node n8n sh
+cd ~/.n8n/nodes
+npm install n8n-nodes-uprock@<version>
+exit
+docker restart n8n
+```
+
+For blue/green, rolling, or queue-mode deployments, bake the package installation into the image or run the install step against the persistent n8n volume before starting the new containers. Do not deploy one worker version with the package and another without it.
+
+### Without Docker
+
+Install the package as the same OS user that runs n8n. Do not install it as `root` unless n8n itself runs as `root`.
+
+For an n8n service user named `n8n`:
+
+```sh
+sudo -u n8n sh -lc 'mkdir -p ~/.n8n/nodes && cd ~/.n8n/nodes && npm install n8n-nodes-uprock'
+sudo systemctl restart n8n
+```
+
+For a local npm-based n8n install running as your current user:
+
+```sh
+mkdir -p ~/.n8n/nodes
+cd ~/.n8n/nodes
+npm install n8n-nodes-uprock
+n8n start
+```
+
+Upgrade or pin a package version by replacing `<version>` with the release you want:
+
+```sh
+cd ~/.n8n/nodes
+npm install n8n-nodes-uprock@<version>
+```
+
+Restart every n8n process after installation or upgrade so n8n reloads the community package.
+
+### Install An Unreleased Build From This Repository
+
+Use this when testing a commit before it is published to npm:
+
+```sh
+npm ci
+npm run build
+npm pack
+```
+
+Copy the generated `n8n-nodes-uprock-<version>.tgz` to the n8n host or container, then install it from the same `~/.n8n/nodes` directory:
+
+```sh
+cd ~/.n8n/nodes
+npm install /path/to/n8n-nodes-uprock-<version>.tgz
+```
+
+Restart n8n after installing the tarball.
+
+### Configure The UpRock Credential
+
+After n8n restarts:
+
+1. Open n8n and create an **UpRock Crawler API** credential.
+2. Paste only the UpRock API key UUID into **API Key UUID**.
+3. Leave **MCP Base URL** as `https://mcp.uprock.ai` unless you are targeting a staging or local MCP endpoint.
+4. Add an **UpRock Crawler** node to a workflow and choose a command.
+
+### Operational Notes
+
+- Keep the installed package version pinned in production change tickets and deployment manifests.
+- Persist `/home/node/.n8n/nodes` for Docker deployments, otherwise package files can disappear when containers are recreated.
+- If n8n reports missing community packages after a container replacement, verify that the persisted volume contains `~/.n8n/nodes/node_modules/n8n-nodes-uprock`.
+- Community packages execute inside the n8n runtime. Review and approve upgrades the same way you handle other workflow runtime dependencies.
+- n8n's official references: [community node installation](https://docs.n8n.io/integrations/community-nodes/installation/), [manual npm installation](https://docs.n8n.io/integrations/community-nodes/installation/manual-install/), and [community node troubleshooting](https://docs.n8n.io/integrations/community-nodes/troubleshooting/).
 
 ## Operations
 
