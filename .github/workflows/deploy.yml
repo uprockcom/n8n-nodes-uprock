@@ -44,6 +44,11 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Record deploy metadata
         id: meta
         run: |
@@ -56,11 +61,6 @@ jobs:
           echo "pkg_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
           echo "commit=$COMMIT"
           echo "pkg_version=$PKG_VERSION"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
 
       - name: Install dependencies (npm ci)
         run: npm ci --no-audit --no-fund
