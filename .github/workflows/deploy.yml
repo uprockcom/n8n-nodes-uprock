@@ -120,8 +120,8 @@ jobs:
           TGZ='${{ steps.pack.outputs.tarball }}'
           TGZ_BASENAME=$(basename "$TGZ")
           docker cp "$TGZ" "$N8N_CONTAINER:/tmp/$TGZ_BASENAME"
-          # docker cp always lands files as root; chown so the -u node install step can also clean them up (sticky /tmp)
-          docker exec "$N8N_CONTAINER" chown "$N8N_EXEC_USER" "/tmp/$TGZ_BASENAME"
+          # docker cp always lands files as root; chown (as root, since container default user is node) so the -u node install step can unlink it under sticky /tmp
+          docker exec -u root "$N8N_CONTAINER" chown "$N8N_EXEC_USER" "/tmp/$TGZ_BASENAME"
           docker exec "$N8N_CONTAINER" ls -l "/tmp/$TGZ_BASENAME"
 
       - name: Install tarball into $N8N_NODES_DIR
