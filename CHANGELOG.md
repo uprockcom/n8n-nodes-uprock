@@ -1,0 +1,36 @@
+# Changelog
+
+## 0.2.0 - 2026-04-25
+
+- Initial commit
+- chore: ignore local runtime artifacts
+- docs: add repository agent guidance
+- chore: add TypeScript and lint configuration
+- chore: scaffold package metadata
+- ci: add package workflow
+- docs: add UpRock crawler planning epic
+- feat(credentials): add UpRock crawler credential
+- feat(icons): add UpRock node icons
+- feat(commands): add shared command types
+- feat(commands): add crawl fetch fields
+- feat(commands): add resource fetch fields
+- feat(commands): add sweep fields
+- feat(commands): add web research fields
+- feat(commands): aggregate command descriptions
+- feat(shared): add options and argument cleanup helpers
+- feat(shared): implement MCP transport
+- feat(shared): normalize MCP outputs
+- feat(node): add UpRock crawler node
+- test: add mocked transport coverage
+- test: add static verification coverage
+- docs: document UpRock crawler usage
+- chore(docker): add local n8n harness
+- chore: mark local work committed
+- feat(commands): add composite fetch command
+- Update README.md
+- ci(deploy): add workflow to install built node into upt-build-main n8n
+- ci(deploy): set up Node.js before reading package.json version
+- ci(deploy): chown tarball to node user after docker cp
+- ci(deploy): run chown as root inside n8n container
+- chore: automate GitHub release publishing
+
