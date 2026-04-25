@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 - 2026-04-25
+
+- fix: move npm package to uprock-ai scope
+
 ## 0.3.0 - 2026-04-25
 
 - fix: publish npm package as public
