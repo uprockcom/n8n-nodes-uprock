@@ -4,11 +4,16 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/release-minor.sh [--dry-run] [--prerelease]
+Usage: ./scripts/release-version.sh [patch|minor|major] [--dry-run] [--prerelease]
 
-Creates the next minor GitHub release from origin/main.
+Creates the next semantic GitHub release from origin/main.
+
+Defaults to a patch release when no bump type is provided.
 
 Options:
+  patch         Bump the patch version (default)
+  minor         Bump the minor version
+  major         Bump the major version
   --dry-run     Show the next version and planned commands without changing files
   --prerelease  Mark the GitHub release as a prerelease
   -h, --help    Show this help
@@ -93,9 +98,27 @@ DRY_RUN="false"
 PRERELEASE="false"
 REMOTE_NAME="origin"
 BRANCH_NAME="main"
+BUMP_TYPE="patch"
 
 while (($# > 0)); do
   case "$1" in
+    patch|minor|major)
+      [[ "$BUMP_TYPE" == "patch" ]] || fail "Bump type already set to ${BUMP_TYPE}"
+      BUMP_TYPE="$1"
+      shift
+      ;;
+    --patch)
+      BUMP_TYPE="patch"
+      shift
+      ;;
+    --minor)
+      BUMP_TYPE="minor"
+      shift
+      ;;
+    --major)
+      BUMP_TYPE="major"
+      shift
+      ;;
     --dry-run)
       DRY_RUN="true"
       shift
@@ -174,12 +197,21 @@ fi
 
 next_version="$(node -e '
 const version = process.argv[1];
+const bumpType = process.argv[2];
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
   throw new Error(`Invalid semver version: ${version}`);
 }
-const [major, minor] = version.split(".").map(Number);
-console.log(`${major}.${minor + 1}.0`);
-' "$base_version")"
+const [major, minor, patch] = version.split(".").map(Number);
+if (bumpType === "major") {
+  console.log(`${major + 1}.0.0`);
+} else if (bumpType === "minor") {
+  console.log(`${major}.${minor + 1}.0`);
+} else if (bumpType === "patch") {
+  console.log(`${major}.${minor}.${patch + 1}`);
+} else {
+  throw new Error(`Unsupported bump type: ${bumpType}`);
+}
+' "$base_version" "$BUMP_TYPE")"
 next_tag="v${next_version}"
 release_date="$(date -u +%Y-%m-%d)"
 changelog_entries="$(git log --reverse --pretty=format:'- %s' ${commit_range})"
@@ -188,6 +220,7 @@ if [[ -z "$changelog_entries" ]]; then
   changelog_entries='- No release notes captured.'
 fi
 
+log "Bump type: ${BUMP_TYPE}"
 log "Latest tag: ${latest_tag:-<none>}"
 log "Current package version: ${package_version}"
 log "Next version: ${next_version}"

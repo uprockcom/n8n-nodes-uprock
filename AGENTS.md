@@ -84,9 +84,11 @@ project _may_ contain example nodes and/or credentials that need to be
   CHANGELOG.md** in the root of the repository
 - If the user asks to create a release or "release it", use `npm run release`
   from a clean local `main` branch. That script fetches the latest semver tag,
-  increments the package **minor** version, updates `package-lock.json` and
-  `CHANGELOG.md`, commits the release, pushes the branch and tag, and creates
-  the GitHub Release.
+  increments the package **patch** version by default, updates
+  `package-lock.json` and `CHANGELOG.md`, commits the release, pushes the
+  branch and tag, and creates the GitHub Release.
+- Use `npm run release -- minor` or `npm run release -- major` when the user
+  explicitly asks for a non-patch semver bump.
 - Use `npm run release:dry-run` when the user asks to preview the next release
   version or confirm what the release script will do before publishing.
 - Read `.agents/workflow.md` for more info

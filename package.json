@@ -28,8 +28,10 @@
 		"n8n:local:rebuild": "./scripts/n8n-local.sh rebuild",
 		"n8n:local:down": "./scripts/n8n-local.sh down",
 		"n8n:local:logs": "./scripts/n8n-local.sh logs",
-		"release": "./scripts/release-minor.sh",
-		"release:dry-run": "./scripts/release-minor.sh --dry-run",
+		"release": "./scripts/release-version.sh",
+		"release:dry-run": "./scripts/release-version.sh --dry-run",
+		"release:minor": "./scripts/release-version.sh minor",
+		"release:major": "./scripts/release-version.sh major",
 		"release:n8n": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease"
 	},

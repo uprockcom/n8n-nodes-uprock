@@ -37,13 +37,14 @@ Release flow:
 1. Make sure `gh` is authenticated and your local `main` matches `origin/main`.
 2. Preview the next release with `npm run release:dry-run`.
 3. Create the release with `npm run release`.
-4. The script fetches the latest semver tag, bumps the package minor version, updates `package-lock.json` and `CHANGELOG.md`, commits `chore(release): vX.Y.Z`, pushes `main` and the new tag, and creates the GitHub Release.
+4. The script fetches the latest semver tag, bumps the package patch version by default, updates `package-lock.json` and `CHANGELOG.md`, commits `chore(release): vX.Y.Z`, pushes `main` and the new tag, and creates the GitHub Release.
 5. GitHub Actions installs dependencies, checks that the tag matches `package.json`, runs `npm run verify:static`, builds the package, performs an npm dry run, and then publishes it.
 
 Stable GitHub Releases publish to npm with the `latest` dist-tag. GitHub prereleases publish with the `next` dist-tag.
 For this repository, npm provenance is skipped while the GitHub source repository is private, because npm only accepts provenance for public source repositories.
 
-Use `./scripts/release-minor.sh --prerelease` if you need the GitHub Release marked as a prerelease.
+Use `npm run release -- minor` or `npm run release -- major` when you need a larger semver bump.
+Use `./scripts/release-version.sh --prerelease` if you need the GitHub Release marked as a prerelease.
 
 ## Use The UpRock Node In Your Own n8n Instance
 
