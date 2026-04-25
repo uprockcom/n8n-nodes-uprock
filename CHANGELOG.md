@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 - 2026-04-25
+
+- fix: publish npm package as public
+
 ## 0.2.0 - 2026-04-25
 
 - Initial commit
@@ -33,4 +37,3 @@
 - ci(deploy): chown tarball to node user after docker cp
 - ci(deploy): run chown as root inside n8n container
 - chore: automate GitHub release publishing
-
