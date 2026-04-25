@@ -5,6 +5,7 @@ This is an n8n community node package for UpRock. It provides the **UpRock Crawl
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
 - [Installation](#installation)
+- [Releasing](#releasing)
 - [Use The UpRock Node In Your Own n8n Instance](#use-the-uprock-node-in-your-own-n8n-instance)
 - [Operations](#operations)
 - [Credentials](#credentials)
@@ -24,6 +25,24 @@ You can install community nodes from the n8n UI when your instance supports it:
 4. Restart n8n if your deployment doesn't reload community packages automatically.
 
 For command-line and production deployment patterns, use the runbooks below.
+
+## Releasing
+
+npm publishing is automated from GitHub Releases through [`.github/workflows/release.yml`](.github/workflows/release.yml).
+
+Before using it, add an `NPM_TOKEN` repository secret with publish access to the `n8n-nodes-uprock` package on npm.
+
+Release flow:
+
+1. Make sure `gh` is authenticated and your local `main` matches `origin/main`.
+2. Preview the next release with `npm run release:dry-run`.
+3. Create the release with `npm run release`.
+4. The script fetches the latest semver tag, bumps the package minor version, updates `package-lock.json` and `CHANGELOG.md`, commits `chore(release): vX.Y.Z`, pushes `main` and the new tag, and creates the GitHub Release.
+5. GitHub Actions installs dependencies, checks that the tag matches `package.json`, runs `npm run verify:static`, builds the package, performs an npm dry run, and then publishes it.
+
+Stable GitHub Releases publish to npm with the `latest` dist-tag. GitHub prereleases publish with the `next` dist-tag.
+
+Use `./scripts/release-minor.sh --prerelease` if you need the GitHub Release marked as a prerelease.
 
 ## Use The UpRock Node In Your Own n8n Instance
 
@@ -49,11 +68,11 @@ services:
     image: n8nio/n8n:latest
     container_name: n8n
     ports:
-      - "5678:5678"
+      - '5678:5678'
     environment:
-      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
-      GENERIC_TIMEZONE: "UTC"
-      TZ: "UTC"
+      N8N_COMMUNITY_PACKAGES_ENABLED: 'true'
+      GENERIC_TIMEZONE: 'UTC'
+      TZ: 'UTC'
     volumes:
       - n8n_data:/home/node/.n8n
 
