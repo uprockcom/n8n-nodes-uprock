@@ -62,9 +62,9 @@ jobs:
         run: |
           npm run verify:static
           npm run build
-          npm publish --dry-run --ignore-scripts --tag "$NPM_DIST_TAG"
+          npm publish --dry-run --ignore-scripts --access public --tag "$NPM_DIST_TAG"
 
       - name: Publish package
-        run: npm publish --ignore-scripts --provenance --tag "$NPM_DIST_TAG"
+        run: npm publish --ignore-scripts --access public --provenance --tag "$NPM_DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
