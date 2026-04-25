@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 - 2026-04-25
+
+- fix: skip npm provenance for private repo releases
+
 ## 0.4.0 - 2026-04-25
 
 - fix: move npm package to uprock-ai scope
