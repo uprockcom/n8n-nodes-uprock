@@ -24,7 +24,8 @@ jobs:
     runs-on: [self-hosted, linux, x64, upt-build-main, n8n]
     timeout-minutes: 20
     env:
-      PKG_NAME: n8n-nodes-uprock
+      PKG_NAME: '@uprock-ai/n8n-nodes-uprock'
+      PKG_ARTIFACT_NAME: uprock-ai-n8n-nodes-uprock
       N8N_CONTAINER: n8n
       N8N_NODES_DIR: /home/node/.n8n/nodes
       N8N_EXEC_USER: node
@@ -84,7 +85,7 @@ jobs:
       - name: Upload tarball artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.PKG_NAME }}-${{ steps.meta.outputs.pkg_version }}-${{ steps.meta.outputs.short }}
+          name: ${{ env.PKG_ARTIFACT_NAME }}-${{ steps.meta.outputs.pkg_version }}-${{ steps.meta.outputs.short }}
           path: ${{ steps.pack.outputs.tarball }}
           retention-days: 30
           if-no-files-found: error

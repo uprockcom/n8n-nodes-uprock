@@ -16,8 +16,8 @@ export const MCP_ENDPOINT_PATH = 'mcp';
 export const MCP_PROTOCOL_VERSION = '2024-11-05';
 
 export const MCP_CLIENT_INFO = {
-	name: 'n8n-nodes-uprock',
-	version: '0.1.0',
+	name: '@uprock-ai/n8n-nodes-uprock',
+	version: '0.3.0',
 };
 
 export const EXPECTED_UPROCK_MCP_TOOLS = [

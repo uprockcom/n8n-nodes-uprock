@@ -7,6 +7,11 @@ export class UpRockCrawlerApi implements ICredentialType {
 
 	documentationUrl = 'https://github.com/uprockcom/n8n-nodes-uprock?tab=readme-ov-file#credentials';
 
+	icon = {
+		light: 'file:../icons/uprock.svg',
+		dark: 'file:../icons/uprock.dark.svg',
+	} as const;
+
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key UUID',
@@ -24,7 +29,8 @@ export class UpRockCrawlerApi implements ICredentialType {
 			default: 'https://mcp.uprock.ai',
 			placeholder: 'https://mcp.uprock.ai',
 			hint: 'Only change this for local or staging MCP endpoints.',
-			description: 'Base URL for the UpRock MCP service. Change only for local or staging endpoints.',
+			description:
+				'Base URL for the UpRock MCP service. Change only for local or staging endpoints.',
 		},
 	];
 }

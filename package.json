@@ -1,5 +1,5 @@
 {
-	"name": "n8n-nodes-uprock",
+	"name": "@uprock-ai/n8n-nodes-uprock",
 	"version": "0.3.0",
 	"description": "",
 	"license": "MIT",

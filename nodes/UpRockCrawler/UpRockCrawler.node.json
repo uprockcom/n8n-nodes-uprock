@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-uprock",
+	"node": "@uprock-ai/n8n-nodes-uprock",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Development", "Developer Tools"],
