@@ -65,6 +65,12 @@ jobs:
           npm publish --dry-run --ignore-scripts --access public --tag "$NPM_DIST_TAG"
 
       - name: Publish package
-        run: npm publish --ignore-scripts --access public --provenance --tag "$NPM_DIST_TAG"
         env:
+          IS_PRIVATE_REPO: ${{ github.event.repository.private }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "$IS_PRIVATE_REPO" = "true" ]; then
+            npm publish --ignore-scripts --access public --tag "$NPM_DIST_TAG"
+          else
+            npm publish --ignore-scripts --access public --provenance --tag "$NPM_DIST_TAG"
+          fi

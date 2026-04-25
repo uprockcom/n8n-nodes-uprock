@@ -41,6 +41,7 @@ Release flow:
 5. GitHub Actions installs dependencies, checks that the tag matches `package.json`, runs `npm run verify:static`, builds the package, performs an npm dry run, and then publishes it.
 
 Stable GitHub Releases publish to npm with the `latest` dist-tag. GitHub prereleases publish with the `next` dist-tag.
+For this repository, npm provenance is skipped while the GitHub source repository is private, because npm only accepts provenance for public source repositories.
 
 Use `./scripts/release-minor.sh --prerelease` if you need the GitHub Release marked as a prerelease.
 
