@@ -1,6 +1,6 @@
 # @uprock-ai/n8n-nodes-uprock
 
-This is an n8n community node package for UpRock. It provides the **UpRock Crawler** node for running UpRock MCP crawler, sweep, resource fetch, and web research commands in n8n workflows.
+This is an n8n community node package for UpRock. It provides the **UpRock Crawler** node for crawling URLs, fetching rendered content, running regional sweeps, and researching the web in n8n workflows.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 

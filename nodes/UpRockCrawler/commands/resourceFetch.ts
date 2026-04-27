@@ -14,7 +14,7 @@ export const resourceFetchDescription: INodeProperties[] = [
 		displayOptions: {
 			show: showOnlyForResourceFetch,
 		},
-		placeholder: 'crawl://job-id/markdown',
+		placeholder: 'crawl://job-ID/markdown',
 		description: 'A crawl:// or sweep:// resource URI returned by a previous UpRock command',
 	},
 ];

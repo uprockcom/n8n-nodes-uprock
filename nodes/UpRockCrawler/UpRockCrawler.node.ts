@@ -1,4 +1,5 @@
 import {
+	ApplicationError,
 	NodeConnectionTypes,
 	NodeOperationError,
 	type ICredentialDataDecryptedObject,
@@ -48,7 +49,7 @@ type CommandArgumentBuilder = (
 
 function assertResourceUri(uri: unknown): string {
 	if (typeof uri !== 'string' || !/^(crawl|sweep):\/\/.+/.test(uri)) {
-		throw new Error('Resource URI must start with crawl:// or sweep://');
+		throw new ApplicationError('Resource URI must start with crawl:// or sweep://');
 	}
 
 	return uri;
@@ -92,11 +93,7 @@ const commandArgumentBuilders: Record<UpRockCommand, CommandArgumentBuilder> = {
 			query: executeFunctions.getNodeParameter('query', itemIndex),
 			max_results: executeFunctions.getNodeParameter('max_results', itemIndex, 12),
 			num_sources: executeFunctions.getNodeParameter('num_sources', itemIndex, 5),
-			suggested_countries: executeFunctions.getNodeParameter(
-				'suggested_countries',
-				itemIndex,
-				[],
-			),
+			suggested_countries: executeFunctions.getNodeParameter('suggested_countries', itemIndex, []),
 		}),
 };
 
@@ -106,7 +103,7 @@ function buildCommandArguments(
 	itemIndex: number,
 ): IDataObject {
 	if (!isUpRockCommand(command)) {
-		throw new Error(`Unsupported UpRock command: ${command}`);
+		throw new ApplicationError(`Unsupported UpRock command: ${command}`);
 	}
 
 	return commandArgumentBuilders[command](executeFunctions, itemIndex);
@@ -132,7 +129,7 @@ function getResourceContentType(output: IDataObject | undefined): string | undef
 		getStringValue(output?.contentType) ??
 		getStringValue(output?.mimeType) ??
 		(isDataObject(output?.result)
-			? getStringValue(output.result.contentType) ?? getStringValue(output.result.mimeType)
+			? (getStringValue(output.result.contentType) ?? getStringValue(output.result.mimeType))
 			: undefined)
 	);
 }
@@ -159,7 +156,9 @@ async function executeFetchCommand(
 	const markdownUri = getStringValue(
 		isDataObject(crawl.resourceUris) ? crawl.resourceUris.markdown : undefined,
 	);
-	const htmlUri = getStringValue(isDataObject(crawl.resourceUris) ? crawl.resourceUris.html : undefined);
+	const htmlUri = getStringValue(
+		isDataObject(crawl.resourceUris) ? crawl.resourceUris.html : undefined,
+	);
 	let markdown: IDataObject | undefined;
 	let html: IDataObject | undefined;
 
@@ -271,13 +270,13 @@ async function upRockCrawlerCredentialTest(
 		});
 
 		if (initializeResponse.body?.error) {
-			throw new Error(initializeResponse.body.error.message ?? 'Initialize failed');
+			throw new ApplicationError(initializeResponse.body.error.message ?? 'Initialize failed');
 		}
 
 		const sessionId = getHeader(initializeResponse.headers, 'mcp-session-id');
 
 		if (!sessionId) {
-			throw new Error('Initialize did not return a session ID.');
+			throw new ApplicationError('Initialize did not return a session ID.');
 		}
 
 		await requestMcpJsonRpc(
@@ -303,19 +302,25 @@ async function upRockCrawlerCredentialTest(
 		);
 
 		if (toolsResponse.body?.error) {
-			throw new Error(toolsResponse.body.error.message ?? 'tools/list failed');
+			throw new ApplicationError(toolsResponse.body.error.message ?? 'tools/list failed');
 		}
 
 		const tools = Array.isArray(toolsResponse.body?.result?.tools)
 			? toolsResponse.body.result.tools
 			: [];
 		const toolNames = tools
-			.map((tool) => (typeof tool === 'object' && tool !== null ? (tool as IDataObject).name : undefined))
+			.map((tool) =>
+				typeof tool === 'object' && tool !== null ? (tool as IDataObject).name : undefined,
+			)
 			.filter((name): name is string => typeof name === 'string');
-		const missingTools = EXPECTED_UPROCK_MCP_TOOLS.filter((toolName) => !toolNames.includes(toolName));
+		const missingTools = EXPECTED_UPROCK_MCP_TOOLS.filter(
+			(toolName) => !toolNames.includes(toolName),
+		);
 
 		if (missingTools.length > 0) {
-			throw new Error(`MCP server is missing expected tools: ${missingTools.join(', ')}`);
+			throw new ApplicationError(
+				`MCP server is missing expected tools: ${missingTools.join(', ')}`,
+			);
 		}
 
 		return {
@@ -338,7 +343,8 @@ export class UpRockCrawler implements INodeType {
 		group: ['input'],
 		version: 1,
 		subtitle: '={{$parameter["command"]}}',
-		description: 'Run UpRock MCP crawler, sweep, resource fetch, and web research commands',
+		description:
+			'Crawl URLs, fetch rendered content, run regional sweeps, and research the web through UpRock',
 		defaults: {
 			name: 'Scraper - UpRock Crawler',
 		},

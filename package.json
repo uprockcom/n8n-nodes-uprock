@@ -1,7 +1,7 @@
 {
 	"name": "@uprock-ai/n8n-nodes-uprock",
 	"version": "0.5.0",
-	"description": "",
+	"description": "n8n community node for crawling URLs, fetching rendered content, running regional sweeps, and researching the web through UpRock.",
 	"license": "MIT",
 	"homepage": "",
 	"keywords": [
