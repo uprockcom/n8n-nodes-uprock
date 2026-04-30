@@ -21,6 +21,8 @@
 		"dev": "n8n-node dev",
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
+		"pretest": "npm run build",
+		"test": "npm run test:mocked",
 		"verify:static": "tsc --noEmit",
 		"test:mocked": "node --test tests/*.test.mjs",
 		"n8n:local": "./scripts/n8n-local.sh up",

@@ -133,7 +133,14 @@ function assertJsonRpcResult<T extends IDataObject>(
 }
 
 function parseServerSentEventJson(text: string): unknown {
-	const events = text.split(/\r?\n\r?\n/);
+	const normalizedText =
+		!text.includes('\n') &&
+		(text.trimStart().startsWith('event:') || text.trimStart().startsWith('data:')) &&
+		(text.includes('\\n') || text.includes('\\r'))
+			? text.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\r')
+			: text;
+
+	const events = normalizedText.split(/\r?\n\r?\n/);
 	let lastParsedEvent: unknown;
 
 	for (const event of events) {
@@ -161,7 +168,7 @@ function parseServerSentEventJson(text: string): unknown {
 	}
 
 	if (lastParsedEvent === undefined) {
-		return JSON.parse(text);
+		return JSON.parse(normalizedText);
 	}
 
 	return lastParsedEvent;
