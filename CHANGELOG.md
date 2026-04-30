@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 - 2026-04-30
+
+- chore: generalize release version bumping
+- docs: refine UpRock crawler descriptions
+- test: expand UpRock crawler coverage
+
 ## 0.5.0 - 2026-04-25
 
 - fix: skip npm provenance for private repo releases
