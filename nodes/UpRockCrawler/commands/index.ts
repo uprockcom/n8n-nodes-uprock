@@ -16,33 +16,33 @@ const commandOptions: Record<
 	}
 > = {
 	fetch: {
-		name: 'Fetch',
+		name: 'Crawl URL and Fetch Content',
 		value: 'fetch',
-		action: 'Fetch a URL via UpRock and return Markdown and HTML',
+		action: 'Crawl a URL and return Markdown and HTML content',
 		description: 'Crawl a URL, then fetch the returned Markdown and HTML resources',
 	},
 	crawl_fetch: {
-		name: 'Crawl Fetch',
+		name: 'Crawl URL',
 		value: 'crawl_fetch',
-		action: 'Fetch a URL via UpRock',
+		action: 'Crawl a URL via the UpRock network',
 		description: 'Fetch a URL via the UpRock crawl network',
 	},
 	resource_fetch: {
-		name: 'Resource Fetch',
+		name: 'Fetch Resource URI',
 		value: 'resource_fetch',
-		action: 'Fetch an UpRock resource',
+		action: 'Fetch content for a crawl:// or sweep:// resource URI',
 		description: 'Fetch full content for a crawl:// or sweep:// resource URI',
 	},
 	sweep: {
-		name: 'Sweep',
+		name: 'Sweep URL Across Regions',
 		value: 'sweep',
-		action: 'Run an UpRock sweep',
+		action: 'Test a URL across geographic regions',
 		description: 'Test website reliability and performance across regions',
 	},
 	web_research: {
-		name: 'Web Research',
+		name: 'Research Web Query',
 		value: 'web_research',
-		action: 'Search the web via UpRock',
+		action: 'Research a web query across countries',
 		description: 'Search the web across search engines and geographic perspectives',
 	},
 };

@@ -1,13 +1,26 @@
-name: Publish To npm
+# Publishes this n8n community node package to npm from GitHub Actions.
+#
+# Verified n8n community nodes published after May 1, 2026 must ship with npm
+# provenance. This workflow uses GitHub Actions OIDC for provenance and works
+# with either npm Trusted Publishers (recommended) or an optional NPM_TOKEN.
+#
+# One-time setup for Trusted Publishers:
+# 1. Log in to npmjs.com and open this package's settings.
+# 2. Under "Publish access" -> "Trusted Publishers", add GitHub Actions.
+# 3. Set Repository owner to "uprockcom".
+# 4. Set Repository name to "n8n-nodes-uprock".
+# 5. Set Workflow name to "publish.yml".
+
+name: Publish
+
+permissions:
+  contents: read
+  id-token: write
 
 on:
   release:
     types:
       - published
-
-permissions:
-  contents: read
-  id-token: write
 
 concurrency:
   group: npm-publish-${{ github.event.release.tag_name }}
@@ -66,11 +79,10 @@ jobs:
 
       - name: Publish package
         env:
-          IS_PRIVATE_REPO: ${{ github.event.repository.private }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ "$IS_PRIVATE_REPO" = "true" ]; then
-            npm publish --ignore-scripts --access public --tag "$NPM_DIST_TAG"
-          else
-            npm publish --ignore-scripts --access public --provenance --tag "$NPM_DIST_TAG"
+          if [ -n "${NPM_TOKEN:-}" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
           fi
+
+          npm publish --ignore-scripts --access public --provenance --tag "$NPM_DIST_TAG"

@@ -28,9 +28,19 @@ For command-line and production deployment patterns, use the runbooks below.
 
 ## Releasing
 
-npm publishing is automated from GitHub Releases through [`.github/workflows/release.yml`](.github/workflows/release.yml).
+npm publishing is automated from GitHub Releases through [`.github/workflows/publish.yml`](.github/workflows/publish.yml).
 
-Before using it, add an `NPM_TOKEN` repository secret with publish access to the `@uprock-ai/n8n-nodes-uprock` package on npm.
+For n8n verification, npm publishes must come from GitHub Actions with provenance. The recommended setup is npm Trusted Publishers, which lets GitHub Actions publish without storing a long-lived npm token.
+
+One-time setup:
+
+1. Open the package settings on npm.
+2. Under **Publish access** > **Trusted Publishers**, add a GitHub Actions publisher.
+3. Set the repository owner to `uprockcom`.
+4. Set the repository name to `n8n-nodes-uprock`.
+5. Set the workflow name to `publish.yml`.
+
+If you prefer token-based publishing, add an `NPM_TOKEN` repository secret with publish access to the `@uprock-ai/n8n-nodes-uprock` package on npm. The workflow still publishes with provenance in that mode.
 
 Release flow:
 
@@ -38,10 +48,9 @@ Release flow:
 2. Preview the next release with `npm run release:dry-run`.
 3. Create the release with `npm run release`.
 4. The script fetches the latest semver tag, bumps the package patch version by default, updates `package-lock.json` and `CHANGELOG.md`, commits `chore(release): vX.Y.Z`, pushes `main` and the new tag, and creates the GitHub Release.
-5. GitHub Actions installs dependencies, checks that the tag matches `package.json`, runs `npm run verify:static`, builds the package, performs an npm dry run, and then publishes it.
+5. GitHub Actions installs dependencies, checks that the tag matches `package.json`, runs `npm run verify:static`, builds the package, performs an npm dry run, and then publishes it to npm with provenance.
 
 Stable GitHub Releases publish to npm with the `latest` dist-tag. GitHub prereleases publish with the `next` dist-tag.
-For this repository, npm provenance is skipped while the GitHub source repository is private, because npm only accepts provenance for public source repositories.
 
 Use `npm run release -- minor` or `npm run release -- major` when you need a larger semver bump.
 Use `./scripts/release-version.sh --prerelease` if you need the GitHub Release marked as a prerelease.
