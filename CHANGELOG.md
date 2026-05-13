@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 - 2026-05-13
+
+- Delete .github/workflows/deploy.yml
+- chore: align publish workflow with n8n verification
+
 ## 0.5.1 - 2026-04-30
 
 - chore: generalize release version bumping
