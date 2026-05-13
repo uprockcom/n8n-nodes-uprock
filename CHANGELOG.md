@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3 - 2026-05-13
+
+- fix: add credential-level test
+
 ## 0.5.2 - 2026-05-13
 
 - Delete .github/workflows/deploy.yml
