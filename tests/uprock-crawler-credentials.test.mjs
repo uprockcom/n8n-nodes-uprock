@@ -7,6 +7,10 @@ const require = createRequire(import.meta.url);
 const {
 	UpRockCrawlerApi,
 } = require('../dist/credentials/UpRockCrawlerApi.credentials.js');
+const {
+	MCP_CLIENT_INFO,
+	MCP_PROTOCOL_VERSION,
+} = require('../dist/nodes/UpRockCrawler/shared/transport.js');
 
 test('credential exposes an MCP initialize test request', () => {
 	const credential = new UpRockCrawlerApi();
@@ -14,6 +18,7 @@ test('credential exposes an MCP initialize test request', () => {
 	assert.equal(credential.test.request.method, 'POST');
 	assert.equal(credential.test.request.headers.Accept, 'application/json, text/event-stream');
 	assert.equal(credential.test.request.body.method, 'initialize');
-	assert.equal(credential.test.request.body.params.protocolVersion, '2024-11-05');
+	assert.equal(credential.test.request.body.params.protocolVersion, MCP_PROTOCOL_VERSION);
+	assert.deepEqual(credential.test.request.body.params.clientInfo, MCP_CLIENT_INFO);
 	assert.match(credential.test.request.url, /^=\{\{.+\/mcp"\}\}$/);
 });

@@ -7,6 +7,8 @@ const require = createRequire(import.meta.url);
 const {
 	buildMcpToolCallRequest,
 	callUpRockMcpTool,
+	MCP_CLIENT_INFO,
+	MCP_PROTOCOL_VERSION,
 	parseMcpJsonRpcResponse,
 } = require('../dist/nodes/UpRockCrawler/shared/transport.js');
 const { cleanMcpArguments } = require('../dist/nodes/UpRockCrawler/shared/input.js');
@@ -81,6 +83,8 @@ test('initializes MCP session and reuses session ID for initialized notification
 	const result = await callUpRockMcpTool.call(context, 'web_research', { query: 'example' });
 
 	assert.equal(requests[0].body.method, 'initialize');
+	assert.equal(requests[0].body.params.protocolVersion, MCP_PROTOCOL_VERSION);
+	assert.deepEqual(requests[0].body.params.clientInfo, MCP_CLIENT_INFO);
 	assert.equal(requests[1].body.method, 'notifications/initialized');
 	assert.equal(requests[1].headers['Mcp-Session-Id'], 'session-123');
 	assert.equal(requests[2].body.method, 'tools/call');

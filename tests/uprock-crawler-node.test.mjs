@@ -7,6 +7,10 @@ const require = createRequire(import.meta.url);
 const { UpRockCrawler } = require('../dist/nodes/UpRockCrawler/UpRockCrawler.node.js');
 const {
 	EXPECTED_UPROCK_MCP_TOOLS,
+	MCP_ACCEPT_HEADER,
+	MCP_CLIENT_INFO,
+	MCP_CONTENT_TYPE_HEADER,
+	MCP_PROTOCOL_VERSION,
 } = require('../dist/nodes/UpRockCrawler/shared/transport.js');
 const { normalizeMcpToolResult } = require('../dist/nodes/UpRockCrawler/shared/output.js');
 
@@ -182,6 +186,142 @@ test('execute runs web_research and returns normalized output', async () => {
 			description: 'Example description',
 		},
 	]);
+});
+
+test('execute runs sweep with the same MCP bootstrap flow and arguments as the manual curl', async () => {
+	const node = new UpRockCrawler();
+	const { context, requests } = createExecuteContext({
+		parameterItems: [
+			{
+				command: 'sweep',
+				url: 'https://example.com',
+				device: 'mobile',
+				regions: ['NA', 'EU', 'APAC'],
+				timeout: 60,
+				tries: 5,
+			},
+		],
+		responses: [
+			createInitializeResponse(),
+			createInitializedNotificationResponse(),
+			createToolCallResponse({
+				content: [
+					{
+						type: 'text',
+						text: JSON.stringify({
+							report_url: 'https://example.com/report',
+							jobs: [],
+						}),
+					},
+				],
+			}),
+		],
+	});
+
+	await node.execute.call(context);
+
+	assert.equal(requests[0].body.method, 'initialize');
+	assert.equal(requests[0].body.params.protocolVersion, MCP_PROTOCOL_VERSION);
+	assert.deepEqual(requests[0].body.params.clientInfo, MCP_CLIENT_INFO);
+	assert.equal(requests[1].body.method, 'notifications/initialized');
+	assert.equal(requests[1].headers['Mcp-Session-Id'], 'session-123');
+	assert.equal(requests[2].body.method, 'tools/call');
+	assert.equal(requests[2].headers['Mcp-Session-Id'], 'session-123');
+	assert.equal(requests[2].body.params.name, 'sweep');
+	assert.deepEqual(requests[2].body.params.arguments, {
+		url: 'https://example.com',
+		device: 'mobile',
+		regions: ['NA', 'EU', 'APAC'],
+		timeout: 60,
+		tries: 5,
+	});
+});
+
+test('execute can include exact MCP request debug details for sweep', async () => {
+	const node = new UpRockCrawler();
+	const { context } = createExecuteContext({
+		parameterItems: [
+			{
+				command: 'sweep',
+				url: 'https://example.com',
+				device: 'desktop',
+				regions: ['EU'],
+				timeout: 45,
+				tries: 2,
+				includeDebugRequest: true,
+			},
+		],
+		responses: [
+			createInitializeResponse(),
+			createInitializedNotificationResponse(),
+			createToolCallResponse({
+				content: [
+					{
+						type: 'text',
+						text: JSON.stringify({
+							report_url: 'https://example.com/report',
+							jobs: [],
+						}),
+					},
+				],
+			}),
+		],
+	});
+
+	const output = (await node.execute.call(context))[0][0];
+
+	assert.deepEqual(output.json.mcpDebug, {
+		sessionId: 'session-123',
+		initialize: {
+			headers: {
+				Accept: MCP_ACCEPT_HEADER,
+				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+			},
+			body: {
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: MCP_PROTOCOL_VERSION,
+					capabilities: {},
+					clientInfo: MCP_CLIENT_INFO,
+				},
+			},
+		},
+		initialized: {
+			headers: {
+				Accept: MCP_ACCEPT_HEADER,
+				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+				'Mcp-Session-Id': 'session-123',
+			},
+			body: {
+				jsonrpc: '2.0',
+				method: 'notifications/initialized',
+			},
+		},
+		toolCall: {
+			headers: {
+				Accept: MCP_ACCEPT_HEADER,
+				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+				'Mcp-Session-Id': 'session-123',
+			},
+			body: {
+				jsonrpc: '2.0',
+				id: 2,
+				method: 'tools/call',
+				params: {
+					name: 'sweep',
+					arguments: {
+						url: 'https://example.com',
+						device: 'desktop',
+						regions: ['EU'],
+						timeout: 45,
+						tries: 2,
+					},
+				},
+			},
+		},
+	});
 });
 
 test('execute runs fetch and hydrates markdown and html resources', async () => {

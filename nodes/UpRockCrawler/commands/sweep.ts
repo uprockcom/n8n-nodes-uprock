@@ -77,4 +77,15 @@ export const sweepDescription: INodeProperties[] = [
 		},
 		description: 'Number of checks per region. Checks across regions and tries run concurrently.',
 	},
+	{
+		displayName: 'Include MCP Request Debug',
+		name: 'includeDebugRequest',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: showOnlyForSweep,
+		},
+		description:
+			'Whether to include the exact MCP request headers and bodies used for this sweep. Useful for comparing the node request with a manual curl.',
+	},
 ];

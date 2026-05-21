@@ -1,4 +1,10 @@
 import type { ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
+import {
+	MCP_ACCEPT_HEADER,
+	MCP_CLIENT_INFO,
+	MCP_CONTENT_TYPE_HEADER,
+	MCP_PROTOCOL_VERSION,
+} from '../nodes/UpRockCrawler/shared/mcp';
 
 const upRockCredentialTestUrlExpression =
 	'={{(($credentials.mcpBaseUrl || "https://mcp.uprock.ai").trim().replace(/\\/+$/, "")) + "/" + encodeURIComponent(($credentials.apiKey || "").trim()) + "/mcp"}}';
@@ -42,20 +48,17 @@ export class UpRockCrawlerApi implements ICredentialType {
 			method: 'POST',
 			url: upRockCredentialTestUrlExpression,
 			headers: {
-				Accept: 'application/json, text/event-stream',
-				'Content-Type': 'application/json',
+				Accept: MCP_ACCEPT_HEADER,
+				'Content-Type': MCP_CONTENT_TYPE_HEADER,
 			},
 			body: {
 				jsonrpc: '2.0',
 				id: 1,
 				method: 'initialize',
 				params: {
-					protocolVersion: '2024-11-05',
+					protocolVersion: MCP_PROTOCOL_VERSION,
 					capabilities: {},
-					clientInfo: {
-						name: '@uprock-ai/n8n-nodes-uprock',
-						version: '1.0.0',
-					},
+					clientInfo: MCP_CLIENT_INFO,
 				},
 			},
 			json: true,

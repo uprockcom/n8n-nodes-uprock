@@ -18,8 +18,14 @@ import { cleanMcpArguments } from './shared/input';
 import { normalizeMcpToolResult, type McpToolResult } from './shared/output';
 import {
 	buildUpRockMcpUrl,
+	buildMcpInitializeRequest,
+	buildMcpInitializedNotificationRequest,
+	buildMcpRequestHeaders,
+	buildMcpToolCallRequest,
 	EXPECTED_UPROCK_MCP_TOOLS,
+	MCP_ACCEPT_HEADER,
 	MCP_CLIENT_INFO,
+	MCP_CONTENT_TYPE_HEADER,
 	MCP_PROTOCOL_VERSION,
 	callUpRockMcpTool,
 	callUpRockMcpToolInSession,
@@ -140,6 +146,40 @@ function getResourceSizeBytes(output: IDataObject | undefined): number | undefin
 	return typeof sizeBytes === 'number' ? sizeBytes : undefined;
 }
 
+async function executeSweepCommandWithDebug(
+	executeFunctions: IExecuteFunctions,
+	args: IDataObject,
+	itemIndex: number,
+): Promise<IDataObject> {
+	const session = await initializeUpRockMcpSession.call(executeFunctions, itemIndex);
+	const toolCallRequest = buildMcpToolCallRequest('sweep', args);
+	const sweepResult = await callUpRockMcpToolInSession.call(
+		executeFunctions,
+		session,
+		'sweep',
+		args,
+	);
+	const output = normalizeMcpToolResult('sweep', sweepResult as McpToolResult);
+
+	output.mcpDebug = {
+		sessionId: session.sessionId,
+		initialize: {
+			headers: buildMcpRequestHeaders(),
+			body: buildMcpInitializeRequest(),
+		},
+		initialized: {
+			headers: buildMcpRequestHeaders(session.sessionId),
+			body: buildMcpInitializedNotificationRequest(),
+		},
+		toolCall: {
+			headers: buildMcpRequestHeaders(session.sessionId),
+			body: toolCallRequest,
+		},
+	};
+
+	return output;
+}
+
 async function executeFetchCommand(
 	executeFunctions: IExecuteFunctions,
 	args: IDataObject,
@@ -229,8 +269,8 @@ async function requestMcpJsonRpc(
 	sessionId?: string,
 ): Promise<CredentialTestHttpResponse> {
 	const headers: IDataObject = {
-		Accept: 'application/json, text/event-stream',
-		'Content-Type': 'application/json',
+		Accept: MCP_ACCEPT_HEADER,
+		'Content-Type': MCP_CONTENT_TYPE_HEADER,
 	};
 
 	if (sessionId) {
@@ -376,10 +416,16 @@ export class UpRockCrawler implements INodeType {
 
 			try {
 				const args = buildCommandArguments(this, command, itemIndex);
+				const includeDebugRequest =
+					command === 'sweep'
+						? (this.getNodeParameter('includeDebugRequest', itemIndex, false) as boolean)
+						: false;
 				let outputJson: IDataObject;
 
 				if (command === 'fetch') {
 					outputJson = await executeFetchCommand(this, args, itemIndex);
+				} else if (command === 'sweep' && includeDebugRequest) {
+					outputJson = await executeSweepCommandWithDebug(this, args, itemIndex);
 				} else {
 					const result = await callUpRockMcpTool.call(this, command, args, itemIndex);
 					outputJson = normalizeMcpToolResult(command, result as McpToolResult);

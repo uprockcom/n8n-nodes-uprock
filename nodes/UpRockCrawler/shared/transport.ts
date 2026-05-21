@@ -6,19 +6,25 @@ import type {
 	IHttpRequestOptions,
 	ILoadOptionsFunctions,
 } from 'n8n-workflow';
+import {
+	MCP_ACCEPT_HEADER,
+	MCP_CLIENT_INFO,
+	MCP_CONTENT_TYPE_HEADER,
+	MCP_PROTOCOL_VERSION,
+} from './mcp';
+
+export {
+	MCP_ACCEPT_HEADER,
+	MCP_CLIENT_INFO,
+	MCP_CONTENT_TYPE_HEADER,
+	MCP_PROTOCOL_VERSION,
+} from './mcp';
 
 export const UPROCK_CRAWLER_CREDENTIAL_TYPE = 'upRockCrawlerApi';
 
 export const DEFAULT_MCP_BASE_URL = 'https://mcp.uprock.ai';
 
 export const MCP_ENDPOINT_PATH = 'mcp';
-
-export const MCP_PROTOCOL_VERSION = '2024-11-05';
-
-export const MCP_CLIENT_INFO = {
-	name: '@uprock-ai/n8n-nodes-uprock',
-	version: '0.3.0',
-};
 
 export const EXPECTED_UPROCK_MCP_TOOLS = [
 	'crawl_fetch',
@@ -72,6 +78,39 @@ export type UpRockMcpSession = {
 	capabilities?: IDataObject;
 	serverInfo?: IDataObject;
 };
+
+export function buildMcpRequestHeaders(sessionId?: string): IDataObject {
+	const headers: IDataObject = {
+		Accept: MCP_ACCEPT_HEADER,
+		'Content-Type': MCP_CONTENT_TYPE_HEADER,
+	};
+
+	if (sessionId) {
+		headers['Mcp-Session-Id'] = sessionId;
+	}
+
+	return headers;
+}
+
+export function buildMcpInitializeRequest(): IDataObject {
+	return {
+		jsonrpc: '2.0',
+		id: 1,
+		method: 'initialize',
+		params: {
+			protocolVersion: MCP_PROTOCOL_VERSION,
+			capabilities: {},
+			clientInfo: MCP_CLIENT_INFO,
+		},
+	};
+}
+
+export function buildMcpInitializedNotificationRequest(): IDataObject {
+	return {
+		jsonrpc: '2.0',
+		method: 'notifications/initialized',
+	};
+}
 
 export function assertValidUpRockApiKey(apiKey?: string): string {
 	const trimmedApiKey = apiKey?.trim();
@@ -194,14 +233,7 @@ async function postJsonRpc<T extends IDataObject>(
 	body: IDataObject,
 	sessionId?: string,
 ): Promise<McpHttpResponse<T>> {
-	const headers: IDataObject = {
-		Accept: 'application/json, text/event-stream',
-		'Content-Type': 'application/json',
-	};
-
-	if (sessionId) {
-		headers['Mcp-Session-Id'] = sessionId;
-	}
+	const headers = buildMcpRequestHeaders(sessionId);
 
 	const options: IHttpRequestOptions = {
 		method: 'POST',
@@ -226,16 +258,7 @@ export async function initializeUpRockMcpSession(
 	itemIndex = 0,
 ): Promise<UpRockMcpSession> {
 	const url = await getUpRockMcpUrl.call(this, itemIndex);
-	const response = await postJsonRpc.call(this, url, {
-		jsonrpc: '2.0',
-		id: 1,
-		method: 'initialize',
-		params: {
-			protocolVersion: MCP_PROTOCOL_VERSION,
-			capabilities: {},
-			clientInfo: MCP_CLIENT_INFO,
-		},
-	});
+	const response = await postJsonRpc.call(this, url, buildMcpInitializeRequest());
 
 	const result = assertJsonRpcResult('initialize', response.body);
 	const sessionId = getHeader(response.headers, 'mcp-session-id');
@@ -247,10 +270,7 @@ export async function initializeUpRockMcpSession(
 	await postJsonRpc.call(
 		this,
 		url,
-		{
-			jsonrpc: '2.0',
-			method: 'notifications/initialized',
-		},
+		buildMcpInitializedNotificationRequest(),
 		sessionId,
 	);
 
