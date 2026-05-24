@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4 - 2026-05-24
+
+- Add sweep MCP request debugging
+
 ## 0.5.3 - 2026-05-13
 
 - fix: add credential-level test
