@@ -10,6 +10,8 @@ const {
 	MCP_CLIENT_INFO,
 	MCP_PROTOCOL_VERSION,
 	parseMcpJsonRpcResponse,
+	UPROCK_CLIENT_HEADER_NAME,
+	UPROCK_CLIENT_HEADER_VALUE,
 } = require('../dist/nodes/UpRockCrawler/shared/transport.js');
 const { cleanMcpArguments } = require('../dist/nodes/UpRockCrawler/shared/input.js');
 const { normalizeMcpToolResult } = require('../dist/nodes/UpRockCrawler/shared/output.js');
@@ -85,9 +87,12 @@ test('initializes MCP session and reuses session ID for initialized notification
 	assert.equal(requests[0].body.method, 'initialize');
 	assert.equal(requests[0].body.params.protocolVersion, MCP_PROTOCOL_VERSION);
 	assert.deepEqual(requests[0].body.params.clientInfo, MCP_CLIENT_INFO);
+	assert.equal(requests[0].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[1].body.method, 'notifications/initialized');
+	assert.equal(requests[1].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[1].headers['Mcp-Session-Id'], 'session-123');
 	assert.equal(requests[2].body.method, 'tools/call');
+	assert.equal(requests[2].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[2].headers['Mcp-Session-Id'], 'session-123');
 	assert.deepEqual(result.content, [{ type: 'text', text: '{"ok":true}' }]);
 });

@@ -4,6 +4,12 @@ export const MCP_ACCEPT_HEADER = 'application/json, text/event-stream';
 
 export const MCP_CONTENT_TYPE_HEADER = 'application/json';
 
+export const UPROCK_CLIENT_HEADER_NAME = 'UpRock-Client';
+
+const packageNameWithoutScope = packageJson.name.replace(/^@[^/]+\//, '');
+
+export const UPROCK_CLIENT_HEADER_VALUE = `${packageNameWithoutScope}/${packageJson.version}`;
+
 export const MCP_PROTOCOL_VERSION = '2024-11-05';
 
 export const MCP_CLIENT_INFO = {

@@ -13,8 +13,12 @@ import {
 	type INodeTypeDescription,
 } from 'n8n-workflow';
 import { commandDescription } from './commands';
-import { isUpRockCommand, type UpRockCommand } from './commands/types';
+import {
+	isUpRockCommand,
+	type UpRockCommand,
+} from './commands/types';
 import { cleanMcpArguments } from './shared/input';
+import { isSweepEnabled } from './shared/features';
 import { normalizeMcpToolResult, type McpToolResult } from './shared/output';
 import {
 	buildUpRockMcpUrl,
@@ -23,15 +27,14 @@ import {
 	buildMcpRequestHeaders,
 	buildMcpToolCallRequest,
 	EXPECTED_UPROCK_MCP_TOOLS,
-	MCP_ACCEPT_HEADER,
 	MCP_CLIENT_INFO,
-	MCP_CONTENT_TYPE_HEADER,
 	MCP_PROTOCOL_VERSION,
 	callUpRockMcpTool,
 	callUpRockMcpToolInSession,
 	initializeUpRockMcpSession,
 	parseMcpJsonRpcResponse,
 	type UpRockCrawlerCredentials,
+	type UpRockMcpSession,
 } from './shared/transport';
 
 type CredentialTestHttpResponse = {
@@ -47,6 +50,10 @@ type CredentialTestHttpResponse = {
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
+
+type ErrorWithMcpDebug = Error & {
+	mcpDebug?: IDataObject;
+};
 
 type CommandArgumentBuilder = (
 	executeFunctions: IExecuteFunctions,
@@ -103,6 +110,12 @@ const commandArgumentBuilders: Record<UpRockCommand, CommandArgumentBuilder> = {
 		}),
 };
 
+function assertCommandEnabled(command: UpRockCommand): void {
+	if (command === 'sweep' && !isSweepEnabled()) {
+		throw new ApplicationError('The sweep command is temporarily disabled in this build.');
+	}
+}
+
 function buildCommandArguments(
 	executeFunctions: IExecuteFunctions,
 	command: string,
@@ -112,11 +125,37 @@ function buildCommandArguments(
 		throw new ApplicationError(`Unsupported UpRock command: ${command}`);
 	}
 
+	assertCommandEnabled(command);
+
 	return commandArgumentBuilders[command](executeFunctions, itemIndex);
 }
 
 function isDataObject(value: unknown): value is IDataObject {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getMcpDebug(error: unknown): IDataObject | undefined {
+	if (!(error instanceof Error)) {
+		return undefined;
+	}
+
+	const mcpDebug = (error as ErrorWithMcpDebug).mcpDebug;
+
+	return isDataObject(mcpDebug) ? mcpDebug : undefined;
+}
+
+function attachMcpDebug(error: unknown, mcpDebug: IDataObject): Error {
+	const baseError = error instanceof Error ? error : new Error(getErrorMessage(error));
+	(baseError as ErrorWithMcpDebug).mcpDebug = mcpDebug;
+	return baseError;
+}
+
+function formatErrorWithMcpDebug(message: string, mcpDebug?: IDataObject): string {
+	if (!mcpDebug) {
+		return message;
+	}
+
+	return `${message}\nMCP debug: ${JSON.stringify(mcpDebug)}`;
 }
 
 function getStringValue(value: unknown): string | undefined {
@@ -151,30 +190,53 @@ async function executeSweepCommandWithDebug(
 	args: IDataObject,
 	itemIndex: number,
 ): Promise<IDataObject> {
-	const session = await initializeUpRockMcpSession.call(executeFunctions, itemIndex);
+	const initialize = {
+		headers: buildMcpRequestHeaders(),
+		body: buildMcpInitializeRequest(),
+	};
+	let session: UpRockMcpSession;
+
+	try {
+		session = await initializeUpRockMcpSession.call(executeFunctions, itemIndex);
+	} catch (error) {
+		const transportDebug = getMcpDebug(error);
+		throw attachMcpDebug(error, {
+			initialize,
+			...(transportDebug ?? {}),
+		});
+	}
+
 	const toolCallRequest = buildMcpToolCallRequest('sweep', args);
-	const sweepResult = await callUpRockMcpToolInSession.call(
-		executeFunctions,
-		session,
-		'sweep',
-		args,
-	);
+	const initialized = {
+		headers: buildMcpRequestHeaders(session.sessionId),
+		body: buildMcpInitializedNotificationRequest(),
+	};
+	const toolCall = {
+		headers: buildMcpRequestHeaders(session.sessionId),
+		body: toolCallRequest,
+	};
+	let sweepResult: IDataObject;
+
+	try {
+		sweepResult = await callUpRockMcpToolInSession.call(executeFunctions, session, 'sweep', args);
+	} catch (error) {
+		const transportDebug = getMcpDebug(error);
+		throw attachMcpDebug(error, {
+			sessionId: session.sessionId,
+			initialize,
+			initialized,
+			toolCall,
+			...(transportDebug ?? {}),
+		});
+	}
+
 	const output = normalizeMcpToolResult('sweep', sweepResult as McpToolResult);
 
 	output.mcpDebug = {
 		sessionId: session.sessionId,
-		initialize: {
-			headers: buildMcpRequestHeaders(),
-			body: buildMcpInitializeRequest(),
-		},
-		initialized: {
-			headers: buildMcpRequestHeaders(session.sessionId),
-			body: buildMcpInitializedNotificationRequest(),
-		},
-		toolCall: {
-			headers: buildMcpRequestHeaders(session.sessionId),
-			body: toolCallRequest,
-		},
+		initialize,
+		initialized,
+		toolCall,
 	};
 
 	return output;
@@ -268,19 +330,10 @@ async function requestMcpJsonRpc(
 	body: IDataObject,
 	sessionId?: string,
 ): Promise<CredentialTestHttpResponse> {
-	const headers: IDataObject = {
-		Accept: MCP_ACCEPT_HEADER,
-		'Content-Type': MCP_CONTENT_TYPE_HEADER,
-	};
-
-	if (sessionId) {
-		headers['Mcp-Session-Id'] = sessionId;
-	}
-
 	const response = (await testFunctions.helpers.request({
 		method: 'POST',
 		uri: url,
-		headers,
+		headers: buildMcpRequestHeaders(sessionId),
 		body,
 		json: true,
 		resolveWithFullResponse: true,
@@ -384,7 +437,9 @@ export class UpRockCrawler implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["command"]}}',
 		description:
-			'Crawl URLs, fetch rendered content, run regional sweeps, and research the web through UpRock',
+			isSweepEnabled()
+				? 'Crawl URLs, fetch rendered content, run regional sweeps, and research the web through UpRock'
+				: 'Crawl URLs, fetch rendered content, and research the web through UpRock',
 		defaults: {
 			name: 'Scraper - UpRock Crawler',
 		},
@@ -413,13 +468,13 @@ export class UpRockCrawler implements INodeType {
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 			const command = this.getNodeParameter('command', itemIndex) as string;
+			const includeDebugRequest =
+				command === 'sweep'
+					? (this.getNodeParameter('includeDebugRequest', itemIndex, false) as boolean)
+					: false;
 
 			try {
 				const args = buildCommandArguments(this, command, itemIndex);
-				const includeDebugRequest =
-					command === 'sweep'
-						? (this.getNodeParameter('includeDebugRequest', itemIndex, false) as boolean)
-						: false;
 				let outputJson: IDataObject;
 
 				if (command === 'fetch') {
@@ -438,10 +493,13 @@ export class UpRockCrawler implements INodeType {
 					},
 				});
 			} catch (error) {
+				const mcpDebug = includeDebugRequest ? getMcpDebug(error) : undefined;
+				const errorMessage = formatErrorWithMcpDebug(getErrorMessage(error), mcpDebug);
+
 				if (!this.continueOnFail()) {
 					throw new NodeOperationError(
 						this.getNode(),
-						error instanceof Error ? error : getErrorMessage(error),
+						error instanceof Error ? errorMessage : getErrorMessage(error),
 						{ itemIndex },
 					);
 				}
@@ -449,7 +507,8 @@ export class UpRockCrawler implements INodeType {
 				returnData.push({
 					json: {
 						command,
-						error: getErrorMessage(error),
+						error: errorMessage,
+						...(mcpDebug ? { mcpDebug } : {}),
 					},
 					pairedItem: {
 						item: itemIndex,

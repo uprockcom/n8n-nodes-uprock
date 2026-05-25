@@ -1,3 +1,5 @@
+import { isSweepEnabled } from '../shared/features';
+
 export const UPROCK_MCP_TOOL_COMMANDS = [
 	'crawl_fetch',
 	'resource_fetch',
@@ -13,4 +15,16 @@ export type UpRockCommand = (typeof UPROCK_NODE_COMMANDS)[number];
 
 export function isUpRockCommand(value: string): value is UpRockCommand {
 	return (UPROCK_NODE_COMMANDS as readonly string[]).includes(value);
+}
+
+export function isUpRockCommandEnabled(command: UpRockCommand): boolean {
+	return command !== 'sweep' || isSweepEnabled();
+}
+
+export function getVisibleUpRockNodeCommands(): UpRockCommand[] {
+	return UPROCK_NODE_COMMANDS.filter((command) => isUpRockCommandEnabled(command));
+}
+
+export function getExpectedUpRockMcpToolCommands(): UpRockMcpToolCommand[] {
+	return UPROCK_MCP_TOOL_COMMANDS.filter((command) => isUpRockCommandEnabled(command));
 }

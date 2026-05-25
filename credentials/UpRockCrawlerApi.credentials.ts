@@ -4,6 +4,8 @@ import {
 	MCP_CLIENT_INFO,
 	MCP_CONTENT_TYPE_HEADER,
 	MCP_PROTOCOL_VERSION,
+	UPROCK_CLIENT_HEADER_NAME,
+	UPROCK_CLIENT_HEADER_VALUE,
 } from '../nodes/UpRockCrawler/shared/mcp';
 
 const upRockCredentialTestUrlExpression =
@@ -50,6 +52,7 @@ export class UpRockCrawlerApi implements ICredentialType {
 			headers: {
 				Accept: MCP_ACCEPT_HEADER,
 				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+				[UPROCK_CLIENT_HEADER_NAME]: UPROCK_CLIENT_HEADER_VALUE,
 			},
 			body: {
 				jsonrpc: '2.0',

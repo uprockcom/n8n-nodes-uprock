@@ -4,6 +4,9 @@ import test from 'node:test';
 
 const require = createRequire(import.meta.url);
 
+const { setSweepEnabled } = require('../dist/nodes/UpRockCrawler/shared/features.js');
+setSweepEnabled(true);
+
 const { UpRockCrawler } = require('../dist/nodes/UpRockCrawler/UpRockCrawler.node.js');
 const {
 	EXPECTED_UPROCK_MCP_TOOLS,
@@ -11,6 +14,8 @@ const {
 	MCP_CLIENT_INFO,
 	MCP_CONTENT_TYPE_HEADER,
 	MCP_PROTOCOL_VERSION,
+	UPROCK_CLIENT_HEADER_NAME,
+	UPROCK_CLIENT_HEADER_VALUE,
 } = require('../dist/nodes/UpRockCrawler/shared/transport.js');
 const { normalizeMcpToolResult } = require('../dist/nodes/UpRockCrawler/shared/output.js');
 
@@ -49,6 +54,21 @@ function createToolCallResponse(result) {
 			result,
 		},
 		headers: {},
+		statusCode: 200,
+	};
+}
+
+function createToolCallErrorResponse(message, data = undefined) {
+	return {
+		body: {
+			error: {
+				message,
+				...(data === undefined ? {} : { data }),
+			},
+		},
+		headers: {
+			'content-type': 'application/json',
+		},
 		statusCode: 200,
 	};
 }
@@ -223,9 +243,12 @@ test('execute runs sweep with the same MCP bootstrap flow and arguments as the m
 	assert.equal(requests[0].body.method, 'initialize');
 	assert.equal(requests[0].body.params.protocolVersion, MCP_PROTOCOL_VERSION);
 	assert.deepEqual(requests[0].body.params.clientInfo, MCP_CLIENT_INFO);
+	assert.equal(requests[0].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[1].body.method, 'notifications/initialized');
+	assert.equal(requests[1].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[1].headers['Mcp-Session-Id'], 'session-123');
 	assert.equal(requests[2].body.method, 'tools/call');
+	assert.equal(requests[2].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[2].headers['Mcp-Session-Id'], 'session-123');
 	assert.equal(requests[2].body.params.name, 'sweep');
 	assert.deepEqual(requests[2].body.params.arguments, {
@@ -276,6 +299,7 @@ test('execute can include exact MCP request debug details for sweep', async () =
 			headers: {
 				Accept: MCP_ACCEPT_HEADER,
 				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+				[UPROCK_CLIENT_HEADER_NAME]: UPROCK_CLIENT_HEADER_VALUE,
 			},
 			body: {
 				jsonrpc: '2.0',
@@ -292,6 +316,7 @@ test('execute can include exact MCP request debug details for sweep', async () =
 			headers: {
 				Accept: MCP_ACCEPT_HEADER,
 				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+				[UPROCK_CLIENT_HEADER_NAME]: UPROCK_CLIENT_HEADER_VALUE,
 				'Mcp-Session-Id': 'session-123',
 			},
 			body: {
@@ -303,6 +328,7 @@ test('execute can include exact MCP request debug details for sweep', async () =
 			headers: {
 				Accept: MCP_ACCEPT_HEADER,
 				'Content-Type': MCP_CONTENT_TYPE_HEADER,
+				[UPROCK_CLIENT_HEADER_NAME]: UPROCK_CLIENT_HEADER_VALUE,
 				'Mcp-Session-Id': 'session-123',
 			},
 			body: {
@@ -322,6 +348,84 @@ test('execute can include exact MCP request debug details for sweep', async () =
 			},
 		},
 	});
+});
+
+test('execute returns MCP debug details when a sweep fails and continueOnFail is enabled', async () => {
+	const node = new UpRockCrawler();
+	const { context } = createExecuteContext({
+		continueOnFail: true,
+		parameterItems: [
+			{
+				command: 'sweep',
+				url: 'https://example.com',
+				device: 'desktop',
+				regions: ['EU'],
+				timeout: 45,
+				tries: 2,
+				includeDebugRequest: true,
+			},
+		],
+		responses: [
+			createInitializeResponse(),
+			createInitializedNotificationResponse(),
+			createToolCallErrorResponse('Sweep upstream failed', {
+				region: 'EU',
+				reason: 'Timeout',
+			}),
+		],
+	});
+
+	const output = (await node.execute.call(context))[0][0];
+
+	assert.match(output.json.error, /Sweep upstream failed/);
+	assert.match(output.json.error, /MCP debug:/);
+	assert.equal(output.json.mcpDebug.sessionId, 'session-123');
+	assert.deepEqual(output.json.mcpDebug.toolCall.body.params.arguments, {
+		url: 'https://example.com',
+		device: 'desktop',
+		regions: ['EU'],
+		timeout: 45,
+		tries: 2,
+	});
+	assert.equal(output.json.mcpDebug.response.statusCode, 200);
+	assert.equal(output.json.mcpDebug.response.body.error.message, 'Sweep upstream failed');
+	assert.deepEqual(output.json.mcpDebug.response.body.error.data, {
+		region: 'EU',
+		reason: 'Timeout',
+	});
+});
+
+test('execute surfaces MCP debug details in the thrown error when a sweep fails', async () => {
+	const node = new UpRockCrawler();
+	const { context } = createExecuteContext({
+		parameterItems: [
+			{
+				command: 'sweep',
+				url: 'https://example.com',
+				device: 'desktop',
+				regions: ['EU'],
+				timeout: 45,
+				tries: 2,
+				includeDebugRequest: true,
+			},
+		],
+		responses: [
+			createInitializeResponse(),
+			createInitializedNotificationResponse(),
+			createToolCallErrorResponse('Sweep upstream failed'),
+		],
+	});
+
+	await assert.rejects(
+		() => node.execute.call(context),
+		(error) => {
+			assert.match(error.message, /Sweep upstream failed/);
+			assert.match(error.message, /MCP debug:/);
+			assert.match(error.message, /"name":"sweep"/);
+			assert.match(error.message, /"statusCode":200/);
+			return true;
+		},
+	);
 });
 
 test('execute runs fetch and hydrates markdown and html resources', async () => {
@@ -573,7 +677,10 @@ test('credential test succeeds when all expected MCP tools are available', async
 		status: 'OK',
 		message: 'Connection successful',
 	});
+	assert.equal(requests[0].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
+	assert.equal(requests[1].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[1].headers['Mcp-Session-Id'], 'session-123');
+	assert.equal(requests[2].headers[UPROCK_CLIENT_HEADER_NAME], UPROCK_CLIENT_HEADER_VALUE);
 	assert.equal(requests[2].body.method, 'tools/list');
 });
 

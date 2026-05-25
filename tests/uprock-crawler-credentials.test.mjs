@@ -10,6 +10,8 @@ const {
 const {
 	MCP_CLIENT_INFO,
 	MCP_PROTOCOL_VERSION,
+	UPROCK_CLIENT_HEADER_NAME,
+	UPROCK_CLIENT_HEADER_VALUE,
 } = require('../dist/nodes/UpRockCrawler/shared/transport.js');
 
 test('credential exposes an MCP initialize test request', () => {
@@ -17,6 +19,10 @@ test('credential exposes an MCP initialize test request', () => {
 
 	assert.equal(credential.test.request.method, 'POST');
 	assert.equal(credential.test.request.headers.Accept, 'application/json, text/event-stream');
+	assert.equal(
+		credential.test.request.headers[UPROCK_CLIENT_HEADER_NAME],
+		UPROCK_CLIENT_HEADER_VALUE,
+	);
 	assert.equal(credential.test.request.body.method, 'initialize');
 	assert.equal(credential.test.request.body.params.protocolVersion, MCP_PROTOCOL_VERSION);
 	assert.deepEqual(credential.test.request.body.params.clientInfo, MCP_CLIENT_INFO);

@@ -1,6 +1,6 @@
 # @uprock-ai/n8n-nodes-uprock
 
-This is an n8n community node package for UpRock. It provides the **UpRock Crawler** node for crawling URLs, fetching rendered content, running regional sweeps, and researching the web in n8n workflows.
+This is an n8n community node package for UpRock. It provides the **UpRock Crawler** node for crawling URLs, fetching rendered content, and researching the web in n8n workflows.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
@@ -194,8 +194,9 @@ The UpRock Crawler node exposes one **Command** selector. Most commands map dire
 - `fetch`: Crawl a URL, then return both Markdown and HTML content
 - `crawl_fetch`: Fetch a URL through the UpRock crawl network
 - `resource_fetch`: Fetch full content for a `crawl://` or `sweep://` resource URI
-- `sweep`: Test website reliability and performance across geographic regions
 - `web_research`: Search the web across search engines and geographic perspectives
+
+The `sweep` command is currently hidden by a package feature flag while it is being fixed. It will be re-enabled in a future release once it is stable again.
 
 ### Command Parameters
 
@@ -217,13 +218,6 @@ The UpRock Crawler node exposes one **Command** selector. Most commands map dire
 
 - Required: `uri`
 - Accepts resource URIs starting with `crawl://` or `sweep://`
-
-`sweep`
-
-- Required: `url`
-- Optional: `device`, `regions`, `timeout`, `tries`
-- Default device: `mobile`
-- Default regions: `NA`, `EU`, `APAC`
 
 `web_research`
 
@@ -267,7 +261,7 @@ Use `fetch` when you want the crawler output and the full page content in one no
 
 Use `resource_fetch` when a prior command returns a `crawl://` or `sweep://` resource URI. Markdown and HTML resources return text content, while screenshot-like resources return resource metadata and binary-safe fields.
 
-Use `sweep` to run regional reliability checks. The default regions are `NA`, `EU`, and `APAC`, and checks run concurrently.
+When the `sweep` feature flag is re-enabled in a future release, the command will again run regional reliability checks. The default regions are `NA`, `EU`, and `APAC`, and checks run concurrently.
 
 Use `web_research` for search. Put geographic terms in the query only when they are the subject of the search. Use **Suggested Countries** when you want search results from a particular geographic perspective.
 
@@ -282,12 +276,12 @@ Fetch a URL:
 
 Fetch returned resources:
 
-1. Run `crawl_fetch` or `sweep`.
+1. Run `crawl_fetch` or, when the feature returns, `sweep`.
 2. Copy a returned `crawl://` or `sweep://` URI into a second UpRock Crawler node.
 3. Select `resource_fetch`.
 4. Read `text` for markdown or HTML resources, or use the returned metadata fields for screenshot-like resources.
 
-Run a regional sweep:
+Run a regional sweep after the feature flag is re-enabled in a future release:
 
 1. Select `sweep`.
 2. Set `url`.

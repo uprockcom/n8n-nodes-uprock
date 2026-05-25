@@ -3,7 +3,7 @@ import { crawlFetchDescription } from './crawlFetch';
 import { fetchDescription } from './fetch';
 import { resourceFetchDescription } from './resourceFetch';
 import { sweepDescription } from './sweep';
-import { UPROCK_NODE_COMMANDS, type UpRockCommand } from './types';
+import { getVisibleUpRockNodeCommands, type UpRockCommand } from './types';
 import { webResearchDescription } from './webResearch';
 
 const commandOptions: Record<
@@ -55,15 +55,17 @@ const commandDescriptions: Record<UpRockCommand, INodeProperties[]> = {
 	web_research: webResearchDescription,
 };
 
+const visibleCommands = getVisibleUpRockNodeCommands();
+
 export const commandDescription: INodeProperties[] = [
 	{
 		displayName: 'Command',
 		name: 'command',
 		type: 'options',
 		noDataExpression: true,
-		options: UPROCK_NODE_COMMANDS.map((command) => commandOptions[command]),
+		options: visibleCommands.map((command) => commandOptions[command]),
 		default: 'fetch',
 		description: 'UpRock command to run',
 	},
-	...UPROCK_NODE_COMMANDS.flatMap((command) => commandDescriptions[command]),
+	...visibleCommands.flatMap((command) => commandDescriptions[command]),
 ];

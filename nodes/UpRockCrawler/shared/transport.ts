@@ -6,11 +6,14 @@ import type {
 	IHttpRequestOptions,
 	ILoadOptionsFunctions,
 } from 'n8n-workflow';
+import { getExpectedUpRockMcpToolCommands } from '../commands/types';
 import {
 	MCP_ACCEPT_HEADER,
 	MCP_CLIENT_INFO,
 	MCP_CONTENT_TYPE_HEADER,
 	MCP_PROTOCOL_VERSION,
+	UPROCK_CLIENT_HEADER_NAME,
+	UPROCK_CLIENT_HEADER_VALUE,
 } from './mcp';
 
 export {
@@ -18,6 +21,8 @@ export {
 	MCP_CLIENT_INFO,
 	MCP_CONTENT_TYPE_HEADER,
 	MCP_PROTOCOL_VERSION,
+	UPROCK_CLIENT_HEADER_NAME,
+	UPROCK_CLIENT_HEADER_VALUE,
 } from './mcp';
 
 export const UPROCK_CRAWLER_CREDENTIAL_TYPE = 'upRockCrawlerApi';
@@ -26,12 +31,7 @@ export const DEFAULT_MCP_BASE_URL = 'https://mcp.uprock.ai';
 
 export const MCP_ENDPOINT_PATH = 'mcp';
 
-export const EXPECTED_UPROCK_MCP_TOOLS = [
-	'crawl_fetch',
-	'resource_fetch',
-	'sweep',
-	'web_research',
-] as const;
+export const EXPECTED_UPROCK_MCP_TOOLS = getExpectedUpRockMcpToolCommands();
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -66,6 +66,10 @@ type RawMcpHttpResponse = {
 	statusCode?: number;
 };
 
+type ErrorWithMcpDebug = Error & {
+	mcpDebug?: IDataObject;
+};
+
 export type UpRockCrawlerCredentials = {
 	apiKey?: string;
 	mcpBaseUrl?: string;
@@ -83,6 +87,7 @@ export function buildMcpRequestHeaders(sessionId?: string): IDataObject {
 	const headers: IDataObject = {
 		Accept: MCP_ACCEPT_HEADER,
 		'Content-Type': MCP_CONTENT_TYPE_HEADER,
+		[UPROCK_CLIENT_HEADER_NAME]: UPROCK_CLIENT_HEADER_VALUE,
 	};
 
 	if (sessionId) {
@@ -159,13 +164,32 @@ function getHeader(headers: IDataObject | undefined, name: string): string | und
 function assertJsonRpcResult<T extends IDataObject>(
 	method: string,
 	response?: JsonRpcResponse<T>,
+	httpResponse?: McpHttpResponse<T>,
 ): T {
 	if (response?.error) {
-		throw new Error(`UpRock MCP ${method} failed: ${response.error.message ?? 'Unknown error'}`);
+		const error = new Error(
+			`UpRock MCP ${method} failed: ${response.error.message ?? 'Unknown error'}`,
+		) as ErrorWithMcpDebug;
+		error.mcpDebug = {
+			response: {
+				statusCode: httpResponse?.statusCode,
+				headers: httpResponse?.headers,
+				body: response,
+			},
+		};
+		throw error;
 	}
 
 	if (!response?.result) {
-		throw new Error(`UpRock MCP ${method} did not return a result.`);
+		const error = new Error(`UpRock MCP ${method} did not return a result.`) as ErrorWithMcpDebug;
+		error.mcpDebug = {
+			response: {
+				statusCode: httpResponse?.statusCode,
+				headers: httpResponse?.headers,
+				body: response,
+			},
+		};
+		throw error;
 	}
 
 	return response.result;
@@ -260,7 +284,7 @@ export async function initializeUpRockMcpSession(
 	const url = await getUpRockMcpUrl.call(this, itemIndex);
 	const response = await postJsonRpc.call(this, url, buildMcpInitializeRequest());
 
-	const result = assertJsonRpcResult('initialize', response.body);
+	const result = assertJsonRpcResult('initialize', response.body, response);
 	const sessionId = getHeader(response.headers, 'mcp-session-id');
 
 	if (!sessionId) {
@@ -325,5 +349,5 @@ export async function callUpRockMcpToolInSession(
 		session.sessionId,
 	);
 
-	return assertJsonRpcResult('tools/call', response.body);
+	return assertJsonRpcResult('tools/call', response.body, response);
 }
