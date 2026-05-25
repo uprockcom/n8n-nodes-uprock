@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 - 2026-05-25
+
+- fix: gate sweep behind a feature flag and tag MCP requests
+
 ## 0.5.4 - 2026-05-24
 
 - Add sweep MCP request debugging
