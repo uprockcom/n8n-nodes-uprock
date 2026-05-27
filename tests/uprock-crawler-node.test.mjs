@@ -73,6 +73,16 @@ function createToolCallErrorResponse(message, data = undefined) {
 	};
 }
 
+function createHttpError(message, response) {
+	const error = new Error(message);
+	error.response = response;
+	error.statusCode = response.statusCode;
+	error.options = {
+		url: 'https://mcp.test/mcp',
+	};
+	return error;
+}
+
 function createExecuteContext({
 	parameterItems,
 	responses,
@@ -423,6 +433,49 @@ test('execute surfaces MCP debug details in the thrown error when a sweep fails'
 			assert.match(error.message, /MCP debug:/);
 			assert.match(error.message, /"name":"sweep"/);
 			assert.match(error.message, /"statusCode":200/);
+			return true;
+		},
+	);
+});
+
+test('execute wraps HTTP request failures in NodeApiError', async () => {
+	const node = new UpRockCrawler();
+	const { context } = createExecuteContext({
+		parameterItems: [
+			{
+				command: 'web_research',
+				query: 'latest n8n news',
+				country: 'US',
+				maxSources: 3,
+			},
+		],
+		responses: [
+			createHttpError('Request failed with status code 429', {
+				statusCode: 429,
+				headers: {
+					'retry-after': '30',
+				},
+				body: {
+					error: 'rate_limited',
+					message: 'Too many requests',
+				},
+			}),
+		],
+	});
+
+	await assert.rejects(
+		() => node.execute.call(context),
+		(error) => {
+			assert.equal(error.constructor.name, 'NodeApiError');
+			assert.equal(error.name, 'NodeApiError');
+			assert.equal(error.httpCode, '429');
+			assert.equal(error.context.itemIndex, 0);
+			assert.equal(error.errorResponse.options.url, 'https://mcp.test/mcp');
+			assert.equal(error.errorResponse.response.headers['retry-after'], '30');
+			assert.deepEqual(error.errorResponse.response.body, {
+				error: 'rate_limited',
+				message: 'Too many requests',
+			});
 			return true;
 		},
 	);
