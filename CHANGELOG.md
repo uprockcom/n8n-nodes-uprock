@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6 - 2026-05-27
+
+- Fix n8n verification review issues
+- Merge pull request #1 from uprockcom/fix/n8n-verification-review
+
 ## 0.5.5 - 2026-05-25
 
 - fix: gate sweep behind a feature flag and tag MCP requests
