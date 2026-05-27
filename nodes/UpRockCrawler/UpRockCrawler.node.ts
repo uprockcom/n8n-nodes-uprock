@@ -1,6 +1,7 @@
 import {
 	ApplicationError,
 	NodeConnectionTypes,
+	NodeApiError,
 	NodeOperationError,
 	type ICredentialDataDecryptedObject,
 	type ICredentialsDecrypted,
@@ -11,6 +12,7 @@ import {
 	type INodeCredentialTestResult,
 	type INodeType,
 	type INodeTypeDescription,
+	type JsonObject,
 } from 'n8n-workflow';
 import { commandDescription } from './commands';
 import {
@@ -132,6 +134,69 @@ function buildCommandArguments(
 
 function isDataObject(value: unknown): value is IDataObject {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasHttpStatus(value: IDataObject | undefined): boolean {
+	const status = value?.status ?? value?.statusCode ?? value?.httpCode;
+
+	return typeof status === 'number' || typeof status === 'string';
+}
+
+function isHttpError(error: unknown): error is JsonObject {
+	if (!isDataObject(error)) {
+		return false;
+	}
+
+	const response = isDataObject(error.response) ? error.response : undefined;
+	const options = isDataObject(error.options)
+		? error.options
+		: isDataObject(error.config)
+			? error.config
+			: undefined;
+
+	return (
+		hasHttpStatus(error) ||
+		hasHttpStatus(response) ||
+		response?.body !== undefined ||
+		response?.data !== undefined ||
+		response?.headers !== undefined ||
+		typeof options?.url === 'string' ||
+		typeof error.url === 'string'
+	);
+}
+
+function toNodeApiErrorResponse(error: JsonObject): JsonObject {
+	if (!(error instanceof Error)) {
+		return error;
+	}
+
+	const errorDetails = error as Error & Record<string, unknown>;
+	const payload: Record<string, unknown> = {
+		name: error.name,
+		message: error.message,
+	};
+
+	for (const key of ['status', 'statusCode', 'httpCode', 'code', 'response', 'error'] as const) {
+		if (errorDetails[key] !== undefined) {
+			payload[key] = errorDetails[key];
+		}
+	}
+
+	const requestOptions = isDataObject(errorDetails.options)
+		? errorDetails.options
+		: isDataObject(errorDetails.config)
+			? errorDetails.config
+			: undefined;
+
+	if (requestOptions) {
+		payload.options = {
+			url: requestOptions.url,
+			method: requestOptions.method,
+			headers: requestOptions.headers,
+		};
+	}
+
+	return payload as JsonObject;
 }
 
 function getMcpDebug(error: unknown): IDataObject | undefined {
@@ -497,6 +562,10 @@ export class UpRockCrawler implements INodeType {
 				const errorMessage = formatErrorWithMcpDebug(getErrorMessage(error), mcpDebug);
 
 				if (!this.continueOnFail()) {
+					if (isHttpError(error)) {
+						throw new NodeApiError(this.getNode(), toNodeApiErrorResponse(error), { itemIndex });
+					}
+
 					throw new NodeOperationError(
 						this.getNode(),
 						error instanceof Error ? errorMessage : getErrorMessage(error),
