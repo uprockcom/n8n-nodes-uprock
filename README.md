@@ -15,9 +15,9 @@ This is an n8n community node package for UpRock. It provides the **UpRock Crawl
 
 ## Installation
 
-Install the package named `@uprock-ai/n8n-nodes-uprock` in a self-hosted n8n instance. n8n Cloud doesn't load unverified npm community node packages, so run this node on self-hosted n8n.
+UpRock Crawler is a verified community node, so it works on n8n Cloud and self-hosted n8n. On the canvas, open the nodes panel, search for **UpRock**, and install it from **More from the community** (instance owners and admins only). See n8n's [Install verified community nodes](https://docs.n8n.io/integrations/community-nodes/installation/verified-install/).
 
-You can install community nodes from the n8n UI when your instance supports it:
+On self-hosted n8n you can also install the npm package `@uprock-ai/n8n-nodes-uprock` directly:
 
 1. Go to **Settings** > **Community Nodes**.
 2. Select **Install**.
